@@ -10,14 +10,15 @@ use Bio_Bricks::Common::Types qw(
 );
 use With::Roles;
 
-use aliased 'Bio_Bricks::KG::Role::LazyIRIable' => LazyIRIable;
+use aliased 'Bio_Bricks::KG::Role::LazyIRIable' => 'LazyIRIable';
 
 ro namespaces => (
-	isa => InstanceOf['URI::NamespaceMap'] & ConsumerOf[LazyIRIable],
+	isa => InstanceOf['URI::NamespaceMap'] & ConsumerOf[ LazyIRIable ],
 	coerce => sub {
-		InstanceOf['URI::NamespaceMap']->assert_valid($_);
-		$_->with::roles(LazyIRIable);
-		$_;
+		state $uri_ns_map = InstanceOf['URI::NamespaceMap'];
+		$uri_ns_map->assert_valid($_[0]);
+		$_[0]->with::roles( LazyIRIable );
+		$_[0];
 	},
 	default => sub {
 		return URI::NamespaceMap->with::roles( LazyIRIable )->new;

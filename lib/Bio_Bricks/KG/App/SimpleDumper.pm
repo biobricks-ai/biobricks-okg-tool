@@ -8,29 +8,15 @@ use Object::Util magic => 0;
 use Bio_Bricks::Common::Setup;
 use Bio_Bricks::Common::Types qw(
 	Path AbsDir
-	ArrayRef
-	CycleTuple
-	InstanceOf
-
-);
-use Bio_Bricks::RDF::AtteanX::Types qw(
-	RDFSubject RDFPredicate RDFObject
-	RDFTriple
-);
-use Bio_Bricks::RDF::DSL::Types qw(
-	RDF_DSL_Object
-	RDF_DSL_PredicateObjectPairs
 );
 use String::CamelCase qw(decamelize);
 
 use Bio_Bricks::DuckDB;
+use Bio_Bricks::RDF::DSL;
 
 use Attean;
-use Attean::RDF qw(iri literal triple blank);
 use URI::NamespaceMap;
 use With::Roles;
-use curry;
-use List::Util qw(pairmap);
 use Devel::StrictMode qw(LAX);
 
 option input_file => (
@@ -76,9 +62,7 @@ lazy uri_map => method() {
 		grel => 'http://users.ugent.be/~bjdmeest/function/grel.ttl#',
 	);
 
-	return URI::NamespaceMap->with::roles(
-		qw(Bio_Bricks::KG::Role::LazyIRIable)
-	)->new({
+	return URI::NamespaceMap->new({
 		%base_mapping,
 
 		# Placeholders for now.
@@ -87,26 +71,19 @@ lazy uri_map => method() {
 	})->$_tap( guess_and_add => qw(rdf rdfs xsd) );
 };
 
-fun turtle_map( (RDFSubject) $subject, @predicate_object_pairs ) :ReturnType( list => ArrayRef[RDFTriple] ) {
-	state $po_type = RDF_DSL_PredicateObjectPairs;
-	$po_type->assert_valid( \@predicate_object_pairs );
-	my $subject_curry = $subject->curry::_( \&triple );
-	return pairmap {
-		my @triples;
-		if( RDFObject->check($b) ) {
-			@triples = ( $subject_curry->( $a, $b ) );
-		} elsif( $b isa ObjList ) {
-			@triples = map { turtle_map $subject, $a, $_ } $b->@*;
-		} elsif( $b isa BNode ) {
-			@triples = (
-				$subject_curry->($a, $b->{head}),
-				$b->{triples}->@*,
-			)
-		}
-		@triples;
-	} @predicate_object_pairs;
-}
+fun normalize_column_name($column_name) {
+	# Spaces to underscores
+	$column_name =~ s/\s/_/g;
 
+	# Fix use of `FooIDs` to `FooIds` so that it gets decamelize'd
+	# properly:
+	#
+	#   FooIDs -> foo_i_ds
+	#   FooIds -> foo_ids
+	$column_name =~ s/(?<=[_a-z])IDs(?=\z|[_A-Z])/_Ids/g;
+
+	return decamelize($column_name);
+}
 
 method run() {
 	say STDERR <<~INFO; # TODO logging
@@ -119,54 +96,29 @@ method run() {
 	my @column_names = map { $_->{name} } $schema_data->iterator->all->@*;
 	shift @column_names if $column_names[0] eq 'schema';
 
-	my $store = Attean->get_store('SimpleTripleStore')->new();
-
 	my $output_fh = \*STDOUT;
 
 	my $map = $self->uri_map;
 	my $base = $self->_base;
 
-	my sub qname :prototype($) { $map->lazy_iri(@_) }
-	fun bnode( (RDF_DSL_PredicateObjectPairs) $po ) :prototype($) {
-		my $blank = blank();
-		bless { head => $blank, triples => [ turtle_map $blank, $po->@* ] }, 'BNode';
-	}
-	fun olist( @objs ) {
-		state $type = ArrayRef[RDF_DSL_Object];
-		$type->assert_valid(\@objs);
-		bless [@objs], 'ObjList'
-	}
-	my @triples;
-	my $table_name = $self->input_file->basename(qr/\.parquet$/);
-	my $logical_source = $base->lazy_iri('ls_' . $table_name ); 
-	push @triples,
-		turtle_map $logical_source,
-			qname('rdf:type')                 , qname('rml:LogicalSource')                                  ,#;
-			qname('rml:source')               , literal( ''. $self->input_file->relative($self->base_dir) ) ,#;
-			qname('rml:referenceFormulation') , qname('ql:CSV')                                             ;#.
+	my $context = rdf {
+		context( Bio_Bricks::RDF::DSL::Context->new( namespaces => $map ) );
 
+		my $table_name = $self->input_file->basename(qr/\.parquet$/);
+		my $logical_source = $base->lazy_iri('ls_' . $table_name );
+		my $source_file    = $self->input_file->relative($self->base_dir);
 
-	my $dataset_name = 'ctdbase';
-	my @primary_keys = ( 'ChemicalID', 'GeneID');
+		collect turtle_map $logical_source,
+			a()                               , qname('rml:LogicalSource'),#;
+			qname('rml:source')               , literal( "$source_file" ) ,#;
+			qname('rml:referenceFormulation') , qname('ql:CSV')           ;#.
 
-	fun normalize_column_name($column_name) {
-		# Spaces to underscores
-		$column_name =~ s/\s/_/g;
+		my $dataset_name = 'ctdbase';
+		my @primary_keys = ( 'ChemicalID', 'GeneID');
 
-		# Fix use of `FooIDs` to `FooIds` so that it gets decamelize'd
-		# properly:
-		#
-		#   FooIDs -> foo_i_ds
-		#   FooIds -> foo_ids
-		$column_name =~ s/(?<=[_a-z])IDs(?=\z|[_A-Z])/_Ids/g;
-
-		return decamelize($column_name);
-	}
-
-	my $triple_map = $base->lazy_iri('TripleMap_Top');
-	push @triples,
-		turtle_map $triple_map,
-			qname('rdf:type'),  qname('rr:TriplesMap') ,#;
+		my $triple_map = $base->lazy_iri('TripleMap_Top');
+		collect turtle_map $triple_map,
+			a()                   ,  qname('rr:TriplesMap') ,#;
 			qname('rr:subjectMap'), bnode [
 				qname('rr:template'), literal(
 					join q{/},
@@ -185,13 +137,11 @@ method run() {
 				]
 			} @column_names ) ,#;
 		;#.
-
-	$store->add_triple($_) for @triples;
-
+	};
 
 	Attean->get_serializer( 'Turtle' )
-		->new( namespaces => $map )
-		->serialize_iter_to_io( $output_fh, $store->get_triples );
+		->new( namespaces => $context->namespaces )
+		->serialize_iter_to_io( $output_fh, $context->store->get_triples );
 }
 
 1;

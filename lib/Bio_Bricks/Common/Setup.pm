@@ -35,6 +35,8 @@ sub import {
 	feature->import::into( $target, qw(say state postderef isa) );
 	Feature::Compat::Try->import::into( $target );
 
+	Devel::StrictMode->import::into( $target );
+
 	my %type_tiny_fp_check = ( reify_type => sub { Type::Utils::dwim_type($_[0]) }, );
 	Function::Parameters->import::into( $target,
 		{
