@@ -1,0 +1,10 @@
+Sequence
+	⇒ Point at base directory
+	⇒ Select files that being considered for mapping
+		: save this choice
+	⇒ For each file:
+		⇒ Select columns to process
+			: Most cases default to all columns
+	⇒ For each column
+		⇒ If no mapping exists, generate one using something like direct mapping
+		⇒ Select a RDF class for each column where possible.
