@@ -103,7 +103,7 @@ method run() {
 	my $context = rdf {
 		context( Bio_Bricks::RDF::DSL::Context->new( namespaces => $map ) );
 
-		my $table_name = $self->input_file->basename(qr/\.parquet$/);
+		my $table_name     = $self->input_file->basename(qr/\.parquet$/);
 		my $logical_source = $base->lazy_iri('ls_' . $table_name );
 		my $source_file    = $self->input_file->relative($self->base_dir);
 
@@ -124,17 +124,17 @@ method run() {
 						"http://example.com",
 						$dataset_name,
 						$table_name,
-						map { normalize_column_name($_), qq<{$_}> } @primary_keys
-				),
-				qname('rr:class')   ,  qname('ex:chem-gene-ixn'),
-			],
+						map { normalize_column_name($_), qq({$_}) } @primary_keys
+				),#;
+				qname('rr:class')   ,  qname('ex:chem-gene-ixn'),#;
+			],#;
 			( map {
 				my $column_name = $_;
 				qname('rr:predicateObjectMap'), bnode [
-					qname('rr:predicate'), qname('ex:' . normalize_column_name($column_name) ), #;
-					qname('rr:objectMap'), bnode [ qname('rml:reference'), literal($column_name) ],
+					qname('rr:predicate'), qname('ex:' . normalize_column_name($column_name) )    ,#;
+					qname('rr:objectMap'), bnode [ qname('rml:reference'), literal($column_name) ],#;
 				]
-			} @column_names ) ,#;
+			} @column_names )
 		;#.
 	};
 
