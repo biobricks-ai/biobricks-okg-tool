@@ -16,7 +16,6 @@ use Bio_Bricks::RDF::DSL;
 
 use Attean;
 use URI::NamespaceMap;
-use With::Roles;
 use Devel::StrictMode qw(LAX);
 
 option input_file => (

@@ -8,7 +8,6 @@ use Bio_Bricks::Common::Setup;
 use Bio_Bricks::Common::Types qw(
 	InstanceOf ConsumerOf
 );
-use With::Roles;
 
 use aliased 'Bio_Bricks::KG::Role::LazyIRIable' => 'LazyIRIable';
 

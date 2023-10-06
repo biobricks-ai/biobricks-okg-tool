@@ -12,6 +12,7 @@ use Devel::StrictMode;
 use Function::Parameters ();
 use Return::Type::Lexical ();
 use MooX::TypeTiny ();
+use With::Roles ();
 
 use Feature::Compat::Try ();
 
@@ -36,6 +37,8 @@ sub import {
 	Feature::Compat::Try->import::into( $target );
 
 	Devel::StrictMode->import::into( $target );
+
+	With::Roles->import::into( $target );
 
 	my %type_tiny_fp_check = ( reify_type => sub { Type::Utils::dwim_type($_[0]) }, );
 	Function::Parameters->import::into( $target,
