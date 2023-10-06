@@ -3,12 +3,13 @@ package Bio_Bricks::RDF::DSL::Types;
 
 use Type::Library 0.008 -base,
 	-declare => [qw(
-		RDF_DSL_Bnode
-		RDF_DSL_ObjList
 		RDF_DSL_Object
 		RDF_DSL_PredicateObjectPairs
 
 		RDF_DSL_Context
+
+		RDF_DSL_Bnode
+		RDF_DSL_ObjList
 	)];
 use Type::Utils -all;
 
