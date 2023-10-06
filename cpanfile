@@ -12,6 +12,7 @@ requires 'Function::Parameters';
 requires 'IO::String';
 requires 'Import::Into';
 requires 'List::Util';
+requires 'MooX::Struct';
 requires 'MooX::TypeTiny';
 requires 'Mu';
 requires 'Mu::Role';

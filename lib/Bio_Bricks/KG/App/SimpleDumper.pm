@@ -13,6 +13,7 @@ use String::CamelCase qw(decamelize);
 
 use Bio_Bricks::DuckDB;
 use Bio_Bricks::RDF::DSL;
+use Bio_Bricks::RDF::DSL::Types qw(RDF_DSL_Context);
 
 use Attean;
 use URI::NamespaceMap;
@@ -84,6 +85,48 @@ fun normalize_column_name($column_name) {
 	return decamelize($column_name);
 }
 
+use MooX::Struct TableSpec => [
+	qw/$dataset_name! $table_name! @column_names! @primary_keys! $source_file!/
+];
+
+method generate_rml( (RDF_DSL_Context) :$context, :$base, :$spec ) :ReturnType(RDF_DSL_Context) {
+	my $context = rdf {
+		context( $context );
+
+		my $logical_source = $base->lazy_iri('ls_' . $spec->table_name );
+
+		collect turtle_map $logical_source,
+			a()                               , qname('rml:LogicalSource')      ,#;
+			qname('rml:source')               , literal(''.$spec->source_file ) ,#;
+			qname('rml:referenceFormulation') , qname('ql:CSV')                 ;#.
+
+
+		my $triple_map = $base->lazy_iri('TripleMap_Top');
+		collect turtle_map $triple_map,
+			a()                   ,  qname('rr:TriplesMap') ,#;
+			qname('rr:subjectMap'), bnode [
+				qname('rr:template'), literal(
+					join q{/},
+						"http://example.com",
+						$spec->dataset_name,
+						$spec->table_name,
+						map { normalize_column_name($_), qq({$_}) } $spec->primary_keys->@*
+				),#;
+				qname('rr:class')   ,  qname('ex:chem-gene-ixn'),#;
+			],#;
+			( map {
+				my $column_name = $_;
+				qname('rr:predicateObjectMap'), bnode [
+					qname('rr:predicate'), qname('ex:' . normalize_column_name($column_name) )    ,#;
+					qname('rr:objectMap'), bnode [ qname('rml:reference'), literal($column_name) ],#;
+				]
+			} $spec->column_names->@* )
+		;#.
+	};
+
+	return $context;
+}
+
 method run() {
 	say STDERR <<~INFO; # TODO logging
 	== Processing input file: @{[ $self->input_file ]}.
@@ -95,48 +138,25 @@ method run() {
 	my @column_names = map { $_->{name} } $schema_data->iterator->all->@*;
 	shift @column_names if $column_names[0] eq 'schema';
 
+
+	my $spec = TableSpec->new(
+		dataset_name => 'ctdbase',
+		primary_keys => [ 'ChemicalID', 'GeneID' ],
+		table_name   => $self->input_file->basename(qr/\.parquet$/),
+		source_file  => $self->input_file->relative($self->base_dir),
+		column_names => \@column_names,
+	);
+
 	my $output_fh = \*STDOUT;
 
 	my $map = $self->uri_map;
 	my $base = $self->_base;
 
-	my $context = rdf {
-		context( Bio_Bricks::RDF::DSL::Context->new( namespaces => $map ) );
-
-		my $table_name     = $self->input_file->basename(qr/\.parquet$/);
-		my $logical_source = $base->lazy_iri('ls_' . $table_name );
-		my $source_file    = $self->input_file->relative($self->base_dir);
-
-		collect turtle_map $logical_source,
-			a()                               , qname('rml:LogicalSource'),#;
-			qname('rml:source')               , literal( "$source_file" ) ,#;
-			qname('rml:referenceFormulation') , qname('ql:CSV')           ;#.
-
-		my $dataset_name = 'ctdbase';
-		my @primary_keys = ( 'ChemicalID', 'GeneID');
-
-		my $triple_map = $base->lazy_iri('TripleMap_Top');
-		collect turtle_map $triple_map,
-			a()                   ,  qname('rr:TriplesMap') ,#;
-			qname('rr:subjectMap'), bnode [
-				qname('rr:template'), literal(
-					join q{/},
-						"http://example.com",
-						$dataset_name,
-						$table_name,
-						map { normalize_column_name($_), qq({$_}) } @primary_keys
-				),#;
-				qname('rr:class')   ,  qname('ex:chem-gene-ixn'),#;
-			],#;
-			( map {
-				my $column_name = $_;
-				qname('rr:predicateObjectMap'), bnode [
-					qname('rr:predicate'), qname('ex:' . normalize_column_name($column_name) )    ,#;
-					qname('rr:objectMap'), bnode [ qname('rml:reference'), literal($column_name) ],#;
-				]
-			} @column_names )
-		;#.
-	};
+	my $context = $self->generate_rml(
+		context => Bio_Bricks::RDF::DSL::Context->new( namespaces => $map ),
+		base    => $base,
+		spec    => $spec,
+	);
 
 	Attean->get_serializer( 'Turtle' )
 		->new( namespaces => $context->namespaces )
