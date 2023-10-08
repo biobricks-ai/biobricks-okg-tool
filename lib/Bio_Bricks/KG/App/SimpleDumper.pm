@@ -18,14 +18,25 @@ use Bio_Bricks::RDF::DSL::Types qw(RDF_DSL_Context);
 use Attean;
 use URI::NamespaceMap;
 use Devel::StrictMode qw(LAX);
+use Path::Iterator::Rule;
+use File::Spec;
 
-option input_file => (
-	required => 1,
-	is       => 'ro',
+has input_file => (
+	required => 0,
+	is       => 'rw',
 	format   => 's',
 	isa      => Path,
 	coerce   => 1,
 	doc      => 'Path to input file',
+);
+
+option output_file => (
+	required => 1,
+	is       => 'rw',
+	format   => 's',
+	isa      => Path,
+	coerce   => 1,
+	doc      => 'Path to output file',
 );
 
 option base_dir => (
@@ -127,27 +138,80 @@ method generate_rml( (RDF_DSL_Context) :$context, :$base, :$spec ) :ReturnType(R
 	return $context;
 }
 
-method run() {
-	say STDERR <<~INFO; # TODO logging
-	== Processing input file: @{[ $self->input_file ]}.
+use Search::Fzf;
 
-	== Processing base directory: @{[ $self->base_dir ]}.
-	INFO
+
+my %base_fzf_config = (
+	pointer => '>',
+	marker => '*',
+	algo => 'v2',
+);
+
+sub _preview_ddp {
+	require 'DDP';
+	my $dump = DDP::np(@_, colored => 1);
+	# \e[m is the same as \e[0m (reset all modes)
+	[ split /\n/, $dump =~ s/\e\[m/\e\[0m/gr ]
+}
+
+fun with_preview($cb) {
+	return (
+		preview => 1,
+		previewWithColor => 1,
+		previewFunc => $cb,
+	)
+
+}
+
+method user_query_table_spec() {
+	my $parquet_rule = Path::Iterator::Rule->new->file->name( qr/\.parquet$/ );
+	my %parquet_files = map {
+		my $path = path($_);
+		( $path->relative( $self->base_dir->canonpath ) => $path )
+	} $parquet_rule->all( $self->base_dir->child('data-source') );
+	die "No Parquet files found" unless %parquet_files;
+	my $input_files = fzf( [ keys %parquet_files ] , {
+		%base_fzf_config,
+		prompt => 'Choose a Parquet file> ',
+		multi  => 0,
+	});
+
+	$self->input_file( path($parquet_files{$input_files->[0]}) );
+
+	my $dataset_name = ( File::Spec->splitdir($input_files->[0]) )[1];
 
 	my $schema_data = $self->duckdb->get_schema_data( $self->input_file );
 	my @column_names = map { $_->{name} } $schema_data->iterator->all->@*;
 	shift @column_names if $column_names[0] eq 'schema';
 
+	my $primary_keys = fzf( \@column_names , {
+		%base_fzf_config,
+		prompt => 'Choose primary keys> ',
+		sort   => 0,
+		multi  => 1,
+		with_preview( \&_preview_ddp ),
+	});
+
+	die "Need at least one primary key" unless @$primary_keys;
 
 	my $spec = TableSpec->new(
-		dataset_name => 'ctdbase',
-		primary_keys => [ 'ChemicalID', 'GeneID' ],
+		dataset_name => $dataset_name,
+		primary_keys => $primary_keys,
 		table_name   => $self->input_file->basename(qr/\.parquet$/),
 		source_file  => $self->input_file->relative($self->base_dir),
 		column_names => \@column_names,
 	);
 
-	my $output_fh = \*STDOUT;
+}
+
+method run() {
+	say STDERR <<~INFO; # TODO logging
+	== Processing base directory: @{[ $self->base_dir ]}.
+	INFO
+
+	my $spec = $self->user_query_table_spec;
+
+	my $output_fh = $self->output_file->openw_utf8;
 
 	my $map = $self->uri_map;
 	my $base = $self->_base;
