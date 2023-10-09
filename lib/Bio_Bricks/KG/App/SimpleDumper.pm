@@ -20,6 +20,7 @@ use URI::NamespaceMap;
 use Devel::StrictMode qw(LAX);
 use Path::Iterator::Rule;
 use File::Spec;
+use Text::ANSITable;;
 
 has input_file => (
 	required => 0,
@@ -160,15 +161,50 @@ fun with_preview($cb) {
 		previewWithColor => 1,
 		previewFunc => $cb,
 	)
+}
+
+method _preview_column_cb() {
+	return sub {
+		my ($column_name) = $_[0]->@*;
+		try {
+			my $results = $self->duckdb->query( <<~SQL );
+			SELECT DISTINCT @{[ Bio_Bricks::DuckDB::Syntax->column_name($column_name) ]}
+			FROM @{[ Bio_Bricks::DuckDB::Syntax->table_name( '' . $self->input_file) ]}
+			WHERE @{[ Bio_Bricks::DuckDB::Syntax->column_name($column_name) ]} IS NOT NULL
+			LIMIT 100
+			SQL
+
+			my $t = Text::ANSITable->new;
+			my $it = $results->iterator;
+			$t->columns( [$column_name] );
+			$t->add_rows( [ map { [values %$_] } $it->all->@* ] );
+
+			return [ split /\n/, $t->draw ];
+		} catch($e) {
+			return [ split /\n/, $e ];
+		}
+	};
 
 }
 
 method user_query_table_spec() {
 	my $parquet_rule = Path::Iterator::Rule->new->file->name( qr/\.parquet$/ );
-	my %parquet_files = map {
-		my $path = path($_);
-		( $path->relative( $self->base_dir->canonpath ) => $path )
-	} $parquet_rule->all( $self->base_dir->child('data-source') );
+	my %parquet_files = map @$_, map values %$_, {
+		map {
+			my $source_top_dir = $_;
+			map {
+				my $path = path($_);
+				(
+					$path->relative( $source_top_dir )
+					=>
+					[ $path->relative( $self->base_dir->canonpath ) => $path ]
+				)
+			} $parquet_rule->all( $source_top_dir );
+		} (
+			$self->base_dir->child('data-source'),
+			$self->base_dir->child('data-processed')
+		)
+	};
 	die "No Parquet files found" unless %parquet_files;
 	my $input_files = fzf( [ keys %parquet_files ] , {
 		%base_fzf_config,
@@ -182,14 +218,14 @@ method user_query_table_spec() {
 
 	my $schema_data = $self->duckdb->get_schema_data( $self->input_file );
 	my @column_names = map { $_->{name} } $schema_data->iterator->all->@*;
-	shift @column_names if $column_names[0] eq 'schema';
+	shift @column_names if $column_names[0] =~ /\A(?:schema|duckdb_schema)\z/;
 
 	my $primary_keys = fzf( \@column_names , {
 		%base_fzf_config,
 		prompt => 'Choose primary keys> ',
 		sort   => 0,
 		multi  => 1,
-		with_preview( \&_preview_ddp ),
+		with_preview( $self->_preview_column_cb ),
 	});
 
 	die "Need at least one primary key" unless @$primary_keys;

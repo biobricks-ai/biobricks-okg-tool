@@ -23,6 +23,7 @@ requires 'Path::Tiny';
 requires 'Return::Type::Lexical';
 requires 'Search::Fzf';
 requires 'String::CamelCase';
+requires 'Text::ANSITable';
 requires 'Text::CSV';
 requires 'Type::Libraries';
 requires 'Type::Library', '0.008';
