@@ -113,7 +113,7 @@ method generate_rml( (RDF_DSL_Context) :$context, :$base, :$spec ) :ReturnType(R
 			qname('rml:referenceFormulation') , qname('ql:CSV')                 ;#.
 
 
-		my $triple_map = $base->lazy_iri('TripleMap_Top');
+		my $triple_map = $base->lazy_iri('TripleMap_Top_' . $spec->table_name );
 		collect turtle_map $triple_map,
 			a()                   ,  qname('rr:TriplesMap') ,#;
 			qname('rr:subjectMap'), bnode [
