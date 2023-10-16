@@ -115,8 +115,9 @@ method generate_rml( (RDF_DSL_Context) :$context, :$base, :$spec ) :ReturnType(R
 
 		my $triple_map = $base->lazy_iri('TripleMap_Top_' . $spec->table_name );
 		collect turtle_map $triple_map,
-			a()                   ,  qname('rr:TriplesMap') ,#;
-			qname('rr:subjectMap'), bnode [
+			a()                       , qname('rr:TriplesMap') ,#;
+			qname('rml:logicalSource'), $logical_source        ,#;
+			qname('rr:subjectMap')    , bnode [
 				qname('rr:template'), literal(
 					join q{/},
 						"http://example.com",
