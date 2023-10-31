@@ -158,6 +158,7 @@ sub _preview_ddp {
 
 fun with_preview($cb) {
 	return (
+		delimiter => '^', # no delimiter
 		preview => 1,
 		previewWithColor => 1,
 		previewFunc => $cb,
@@ -178,7 +179,7 @@ method _preview_column_cb() {
 			my $t = Text::ANSITable->new;
 			my $it = $results->iterator;
 			$t->columns( [$column_name] );
-			$t->add_rows( [ map { [values %$_] } $it->all->@* ] );
+			$t->add_rows( [ map { my $row = $_; [ map Encode::encode_utf8($_), values %$row ] } $it->all->@* ] );
 
 			return [ split /\n/, $t->draw ];
 		} catch($e) {
