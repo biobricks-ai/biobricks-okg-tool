@@ -56,9 +56,9 @@ method query( (DuckDBQuery) $query) :ReturnType(InstanceOf['Data::TableReader'])
 	$csv_handle->setpos(0);
 	my $reader = Data::TableReader->new(
 		input => IO::String->new($csv_data),
-		decoder => 'CSV',
+		decoder => [ 'CSV' , strict => 1 ],
 		header_row_at => 1,
-		fields  => $header_names,
+		fields  => [ map { name => $_, trim =>  0 }, @$header_names ],
 	);
 
 	return $reader;
