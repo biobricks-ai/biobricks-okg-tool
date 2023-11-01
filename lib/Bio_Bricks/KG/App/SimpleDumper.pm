@@ -17,6 +17,7 @@ use Bio_Bricks::RDF::DSL::Types qw(RDF_DSL_Context);
 
 use Attean;
 use URI::NamespaceMap;
+use URI::Encode qw(uri_encode);
 use Devel::StrictMode qw(LAX);
 use Path::Iterator::Rule;
 use File::Spec;
@@ -94,7 +95,11 @@ fun normalize_column_name($column_name) {
 	#   FooIds -> foo_ids
 	$column_name =~ s/(?<=[_a-z])IDs(?=\z|[_A-Z])/_Ids/g;
 
-	return decamelize($column_name);
+	$column_name = decamelize($column_name);
+
+	$column_name = uri_encode($column_name);
+
+	return $column_name;
 }
 
 use MooX::Struct TableSpec => [

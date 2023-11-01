@@ -33,6 +33,7 @@ requires 'Types::Common';
 requires 'Types::Common::Numeric';
 requires 'Types::Path::Tiny';
 requires 'Types::URI';
+requires 'URI::Encode';
 requires 'URI::NamespaceMap';
 requires 'With::Roles';
 requires 'aliased';
