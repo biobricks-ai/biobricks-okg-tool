@@ -64,17 +64,28 @@ method query( (DuckDBQuery) $query) :ReturnType(InstanceOf['Data::TableReader'])
 	return $reader;
 }
 
-=method _duckdb_parquet_path_to_FROM($data_path) :ReturnType(Str)
+method _parquet_path_to_wildcard( (ParquetPath) $data_path) :ReturnType(Str) {
+	-f $data_path
+	? "$data_path"
+	: "$data_path/*.parquet"
+}
 
-Use SQL FROM that handles Parquet data sets (single file versus directory of files).
+=method parquet_path_to_sql_string($data_path) :ReturnType(Str)
+
+Handles Parquet data sets (single file versus directory of files) in a DuckDB string context.
 
 =cut
-method _duckdb_parquet_path_to_FROM( (ParquetPath) $data_path) :ReturnType(Str) {
-	return Syntax->string(
-		-f $data_path
-		?  "$data_path"
-		: "$data_path/*.parquet"
-	);
+method parquet_path_to_sql_string( (ParquetPath) $data_path) :ReturnType(Str) {
+	return Syntax->string( $self->_parquet_path_to_wildcard($data_path) );
+}
+
+=method parquet_path_to_sql_table($data_path) :ReturnType(Str)
+
+Handles Parquet data sets (single file versus directory of files) in a DuckDB table context.
+
+=cut
+method parquet_path_to_sql_table( (ParquetPath) $data_path) :ReturnType(Str) {
+	return Syntax->table_name( $self->_parquet_path_to_wildcard($data_path) );
 }
 
 method get_schema_data( (Path->coercibles) $data_path )
@@ -86,7 +97,7 @@ method get_schema_data( (Path->coercibles) $data_path )
 					SELECT *
 					FROM parquet_schema(%s) ;
 				SQL
-				$self->_duckdb_parquet_path_to_FROM($data_path)
+				$self->parquet_path_to_sql_string($data_path)
 			)
 		);
 	} else {

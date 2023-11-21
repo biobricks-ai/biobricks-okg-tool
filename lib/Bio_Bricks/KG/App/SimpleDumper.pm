@@ -199,7 +199,7 @@ method _preview_column_cb() {
 		try {
 			my $results = $self->duckdb->query( <<~SQL );
 			SELECT DISTINCT @{[ Bio_Bricks::DuckDB::Syntax->column_name($column_name) ]}
-			FROM @{[ Bio_Bricks::DuckDB::Syntax->table_name( '' . $self->input_file) ]}
+			FROM @{[ Bio_Bricks::DuckDB->parquet_path_to_sql_table($self->input_file) ]}
 			WHERE @{[ Bio_Bricks::DuckDB::Syntax->column_name($column_name) ]} IS NOT NULL
 			LIMIT 100
 			SQL
