@@ -102,6 +102,20 @@ fun normalize_column_name($column_name) {
 	return $column_name;
 }
 
+fun normalize_generic($string) {
+	# Spaces to underscores
+	$string =~ s/\s/_/g;
+	$string = uri_encode($string);
+	return $string;
+}
+
+fun normalize_table_name($table_name) {
+	return normalize_generic($table_name);
+}
+fun normalize_dataset_name($dataset_name) {
+	return normalize_generic($dataset_name);
+}
+
 use MooX::Struct TableSpec => [
 	qw/$dataset_name! $table_name! @column_names! @primary_keys! $source_file!/
 ];
@@ -110,7 +124,11 @@ method generate_rml( (RDF_DSL_Context) :$context, :$base, :$spec ) :ReturnType(R
 	my $context = rdf {
 		context( $context );
 
-		my $logical_source = $base->lazy_iri('ls_' . $spec->table_name );
+		my $logical_source = $base->lazy_iri(join '_',
+			'ls',
+			$spec->dataset_name,
+			$spec->table_name
+		);
 
 		collect turtle_map $logical_source,
 			a()                               , qname('rml:LogicalSource')      ,#;
@@ -126,11 +144,16 @@ method generate_rml( (RDF_DSL_Context) :$context, :$base, :$spec ) :ReturnType(R
 				qname('rr:template'), literal(
 					join q{/},
 						"http://example.com",
-						$spec->dataset_name,
-						$spec->table_name,
+						normalize_dataset_name($spec->dataset_name),
+						normalize_table_name($spec->table_name),
 						map { normalize_column_name($_), qq({$_}) } $spec->primary_keys->@*
 				),#;
-				qname('rr:class')   ,  qname('ex:chem-gene-ixn'),#;
+				qname('rr:class')   ,  qname(
+					join '-',
+						'ex:class',
+						normalize_dataset_name($spec->dataset_name),
+						normalize_table_name($spec->table_name)
+				),#;
 			],#;
 			( map {
 				my $column_name = $_;
