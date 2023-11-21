@@ -5,6 +5,7 @@ use Mu;
 use Bio_Bricks::Common::Setup;
 use Bio_Bricks::Common::Types qw( AbsDir InstanceOf );
 
+use Bio_Bricks::KG::Brick::DataSet;
 use Bio_Bricks::KG::Input::Parquet;
 
 use Path::Iterator::Rule;
@@ -58,9 +59,13 @@ method create() {
 			Bio_Bricks::KG::Input::Parquet->new( input => $_ )
 		}
 		@parquet_files;
-	##TODO DEBUG
-	#use DDP; p %dataset_to_parquet, class => { expand => 'all' };
-	#say join "\n", @parquet_files;
+
+	return [ map {
+		Bio_Bricks::KG::Brick::DataSet->new(
+			name   => $_,
+			inputs => $dataset_to_parquet{$_}
+		);
+	} keys %dataset_to_parquet ]
 }
 
 1;
