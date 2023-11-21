@@ -218,7 +218,11 @@ method _preview_column_cb() {
 }
 
 method user_query_table_spec() {
-	my $parquet_rule = Path::Iterator::Rule->new->file->name( qr/\.parquet$/ );
+	my $parquet_rule = Path::Iterator::Rule->new
+		# Any file or directory that has .parquet suffix.
+		->name( qr/\.parquet$/ )
+		# Accept, but if directory, it is accepted and pruned.
+		->and( sub { \1 });
 	my %parquet_files = map @$_, map values %$_, {
 		map {
 			my $source_top_dir = $_;
