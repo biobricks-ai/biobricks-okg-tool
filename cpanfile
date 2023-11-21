@@ -14,6 +14,7 @@ requires 'IO::String';
 requires 'Import::Into';
 requires 'List::Util';
 requires 'List::Util::groupby';
+requires 'List::UtilsBy';
 requires 'MooX::Struct';
 requires 'MooX::TypeTiny';
 requires 'Mu';
