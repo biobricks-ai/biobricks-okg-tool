@@ -6,7 +6,7 @@ use lib::projectroot qw(lib);
 use Bio_Bricks::KG::App;
 
 sub main {
-	Bio_Bricks::KG::App->new->run;
+	Bio_Bricks::KG::App->new_with_options->run;
 }
 
 main;
