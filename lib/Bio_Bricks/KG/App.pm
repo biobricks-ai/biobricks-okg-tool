@@ -10,6 +10,7 @@ with qw(
 	Bio_Bricks::KG::App::Role::BaseDirOption
 );
 
+subcommand 'yaml' => 'Bio_Bricks::KG::App::YAML';
 
 use Search::Fzf;
 my %base_fzf_config = (
