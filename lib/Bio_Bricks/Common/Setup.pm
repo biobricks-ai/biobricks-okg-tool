@@ -29,11 +29,16 @@ sub import {
 
 	strict->import::into( $target );
 	warnings->import::into( $target );
-	warnings->unimport::out_of( $target, qw( experimental::try ) );
+	if( $^V > v5.34.0 ) {
+		warnings->unimport::out_of( $target, qw( experimental::try ) );
+	}
 
 	autodie->import::into( $target );
 
-	feature->import::into( $target, qw(say state postderef isa) );
+	feature->import::into( $target,
+		qw(say state postderef),
+		qw(isa)x!!( $^V > v5.32.0 ),
+	);
 	Feature::Compat::Try->import::into( $target );
 
 	Devel::StrictMode->import::into( $target );
