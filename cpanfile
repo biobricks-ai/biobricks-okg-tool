@@ -49,6 +49,7 @@ requires 'lib::projectroot';
 requires 'namespace::clean';
 requires 'strict';
 requires 'warnings';
+requires 'ExtUtils::XSpp::Cmd';
 
 on test => sub {
     requires 'LWP::Protocol::https';
