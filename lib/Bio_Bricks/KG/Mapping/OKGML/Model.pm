@@ -70,7 +70,7 @@ method TO_HASH() {
 			sub {
 				prefixes => $self->_data_prefixes->TO_HASH
 			},
-		provided_deref defined $self->_data_datasets && keys $self->_data_datasets->%*,
+		provided_deref keys $self->_data_datasets->%*,
 			sub {
 				datasets => $self->_data_datasets,
 			},
@@ -93,7 +93,7 @@ classmethod FROM_HASH($data) {
 
 	$self->_data_datasets(
 		delete $c->{datasets},
-	);
+	) if exists $c->{datasets};
 
 	$self;
 }
