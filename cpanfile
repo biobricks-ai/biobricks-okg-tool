@@ -40,6 +40,7 @@ requires 'Types::URI';
 requires 'URI::Encode';
 requires 'URI::NamespaceMap';
 requires 'With::Roles';
+requires 'YAML';
 requires 'aliased';
 requires 'autodie';
 requires 'base';
