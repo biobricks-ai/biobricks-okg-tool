@@ -7,6 +7,7 @@ requires 'Data::Dumper';
 requires 'Data::TableReader';
 requires 'Devel::StrictMode';
 requires 'Exporter::Tiny';
+requires 'ExtUtils::XSpp::Cmd';
 requires 'Feature::Compat::Try';
 requires 'File::Spec';
 requires 'Function::Parameters';
@@ -49,7 +50,6 @@ requires 'lib::projectroot';
 requires 'namespace::clean';
 requires 'strict';
 requires 'warnings';
-requires 'ExtUtils::XSpp::Cmd';
 
 on test => sub {
     requires 'LWP::Protocol::https';
