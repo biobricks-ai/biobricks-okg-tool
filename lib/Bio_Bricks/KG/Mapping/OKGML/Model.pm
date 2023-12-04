@@ -46,40 +46,6 @@ rw [ qw(
 	default  => method() { +{} },
 );
 
-# datasets:
-#  (dataset name):
-#     (input name):
-#       Dict[
-#         elements =>
-#           Dict[
-#             columns => ArrayRef[Str, 1]
-#               ## columns in the data source
-#             mapper  => Optional[ HashRef ]
-#               ## mapper module + arguments
-#           ]
-#       ]
-#
-# classes:
-#   Dict[
-#     description => Optional[Str],
-#     types       =>  ArrayRef[ QName | Uri ],
-#     Slurpy,
-#
-#     # has one of:
-#     #  has prefix: concatenate with prefix
-#     #  has uri: fill URI template
-#     #  neither: generate URI using data elements names
-#     prefix      => Optional[Str],
-#        ## where 'prefix' value exists in $self->_data_prefixes
-#     uri         => Optional[Uri],
-#        ## where Uri is actually a URI template
-#   ]
-#
-# values:
-#   Dict[
-#     datatype => Optional[StrMatch[qr/^xsd:(string|integer)$]]
-#        ## TODO: add more xsd: types
-#   ]
 
 rw [ qw(
 	_data_mappings
