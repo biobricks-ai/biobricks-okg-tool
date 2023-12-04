@@ -40,7 +40,19 @@ classmethod identifier($identifier) :ReturnType(Str) {
 	return _double_quote($identifier);
 }
 
+=classmethod column_name($identifier) :ReturnType(Str)
+
+See L</identifier>.
+
+=cut
+
 classmethod column_name($column_name) { $class->identifier($column_name) }
+
+=classmethod table_name($identifier) :ReturnType(Str)
+
+See L</identifier>.
+
+=cut
 
 classmethod table_name($table_name)   { $class->identifier($table_name) }
 
