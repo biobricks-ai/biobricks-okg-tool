@@ -48,6 +48,7 @@ rw _data_prefixes => (
 	required => 0,
 	default  => method() { $self->new_prefixes },
 );
+
 rw _data_meta => (
 	required => 0,
 	isa => HashRef,
@@ -58,9 +59,58 @@ rw _data_meta => (
 		}
 	},
 );
-rw _data_datasets => (
+
+rw [ qw(
+	_data_datasets
+	_data_classes
+	_data_values
+) ] => (
 	required => 0,
+	isa      => HashRef,
 	default  => method() { +{} },
+);
+
+# datasets:
+#  (dataset name):
+#     (input name):
+#       Dict[
+#         elements =>
+#           Dict[
+#             columns => ArrayRef[Str, 1]
+#               ## columns in the data source
+#             mapper  => Optional[ HashRef ]
+#               ## mapper module + arguments
+#           ]
+#       ]
+#
+# classes:
+#   Dict[
+#     description => Optional[Str],
+#     types       =>  ArrayRef[ QName | Uri ],
+#     Slurpy,
+#
+#     # has one of:
+#     #  has prefix: concatenate with prefix
+#     #  has uri: fill URI template
+#     #  neither: generate URI using data elements names
+#     prefix      => Optional[Str],
+#        ## where 'prefix' value exists in $self->_data_prefixes
+#     uri         => Optional[Uri],
+#        ## where Uri is actually a URI template
+#   ]
+#
+# values:
+#   Dict[
+#     datatype => Optional[StrMatch[qr/^xsd:(string|integer)$]]
+#        ## TODO: add more xsd: types
+#   ]
+
+rw [ qw(
+	_data_mappings
+) ] => (
+	required => 0,
+	isa      => ArrayRef,
+	default  => method() { [] },
 );
 
 method TO_HASH() {
@@ -70,10 +120,23 @@ method TO_HASH() {
 			sub {
 				prefixes => $self->_data_prefixes->TO_HASH
 			},
-		provided_deref keys $self->_data_datasets->%*,
+
+		map {
+		my $func = "_data_$_";
+		provided_deref keys $self->$func->%*,
 			sub {
-				datasets => $self->_data_datasets,
+				$_ => $self->$func,
 			},
+		} qw( datasets classes values ),
+
+		map {
+		my $func = "_data_$_";
+		provided_deref scalar $self->$func->@*,
+			sub {
+				$_ => $self->$func,
+			},
+		} qw( mappings ),
+
 	};
 }
 
@@ -86,14 +149,17 @@ classmethod FROM_HASH($data) {
 	$self->_data_meta( delete $c->{meta} ) if exists $c->{meta};
 
 	$self->_data_prefixes(
-		$self->get_class('Prefixes')->FROM_HASH(
+		T('Prefixes')->FROM_HASH(
 			delete $c->{prefixes}
 		)
 	);
 
-	$self->_data_datasets(
-		delete $c->{datasets},
-	) if exists $c->{datasets};
+	for my $key (qw(datasets classes values)) {
+		my $func = "_data_$key";
+		$self->$func(
+			delete $c->{$key},
+		) if exists $c->{$key};
+	}
 
 	$self;
 }
@@ -118,7 +184,7 @@ method add_dataset( :$dataset, :$base_dir ) {
 					mapper  => {
 					},
 					_mapper_alts => {
-						Value      => undef,
+						Value      => { value => undef },
 						Class      => { class => undef },
 						ValueLabel => { class => undef },
 					},
