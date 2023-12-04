@@ -35,7 +35,7 @@ subtest "Loading model" => sub {
 		object {
 			call TO_HASH => hash {
 				field 'prefixes' => hash {
-					field 'cas' => hash {
+					field 'CAS' => hash {
 						field uri => 'http://identifiers.org/cas/';
 						end;
 					};
@@ -46,23 +46,29 @@ subtest "Loading model" => sub {
 		},
 		'prefix';
 
-	todo "Implement class data roundtrip" => sub {
 	is load_model_from_data('class'),
 		object {
 			call TO_HASH => hash {
 				field 'prefixes' => hash {
-					field 'cas'     => D();
+					field 'CAS'     => D();
 					field 'CHEMINF' => D();
 					end;
 				};
 				field 'classes' => hash {
+					field 'CAS RN' => hash {
+					  field 'description' => D();
+					  field 'types' => array {
+					    item 'CHEMINF:000446';
+					    end;
+					  };
+					};
 					end;
 				};
 				etc;
 			};
 		},
 		'class';
-	};
+;
 };
 
 done_testing;
@@ -77,12 +83,12 @@ _meta:
 
 __[ prefix ]__
 prefixes:
-  cas:
+  CAS:
     uri: http://identifiers.org/cas/
 
 __[ class ]__
 prefixes:
-  cas:
+  CAS:
     uri: http://identifiers.org/cas/
   CHEMINF:
     uri: http://purl.obolibrary.org/obo/CHEMINF_
@@ -95,28 +101,27 @@ classes:
 
 __[ data ]__
 prefixes:
-  cas:
+  BAO:
+    uri: http://www.bioassayontology.org/bao#BAO_
+  CAS:
     uri: http://identifiers.org/cas/
   CHEMINF:
     uri: http://purl.obolibrary.org/obo/CHEMINF_
 classes:
-  CAS RN:
-    description: >-
-      CAS registry number.
-    types:
-      - CHEMINF:000446
-    prefix: cas
-  DSSTOX SID:
-    description: >-
-      DSSTOX substance identifier
-    types:
-      - CHEMINF:000568
-    uri: "https://comptox.epa.gov/dashboard/chemical/details/{value}"
   Assay:
-    description: >-
-      bioassay
+    description: bioassay
     types:
       - BAO:0000015
+  CAS RN:
+    description: CAS registry number.
+    prefix: CAS
+    types:
+      - CHEMINF:000446
+  DSSTOX SID:
+    description: DSSTOX substance identifier
+    types:
+      - CHEMINF:000568
+    uri: 'https://comptox.epa.gov/dashboard/chemical/details/{value}'
 datasets:
   ice:
     inputs:
