@@ -6,47 +6,23 @@ use warnings;
 
 use Mu;
 use Bio_Bricks::Common::Setup;
-use Bio_Bricks::Common::Types qw( HashRef AbsDir );
+use Bio_Bricks::Common::Types qw( HashRef ArrayRef AbsDir );
 use Clone qw(clone);
 
 use Sub::HandlesVia;
-use List::Util qw(pairmap);
 use PerlX::Maybe qw(provided_deref);
-use URI::NamespaceMap;
 
-use MooX::Press (
-	class => [
-		Prefixes => [
-			has => [
-				ns_map => {
-					default => sub { URI::NamespaceMap->new; },
-				}
-			],
-			can => {
-				is_empty  => method() {
-					0 == $self->ns_map->list_prefixes;
-				},
-				FROM_HASH => classmethod($data) {
-					my $c = clone($data);
-					my $self = $class->new;
-					for my $ns (keys %$c) {
-						$self->ns_map->add_mapping( $ns => delete $c->{$ns}{uri} );
-					}
-					$self;
-				},
-				TO_HASH => method() {
-					return +{ pairmap {
-						$a => { uri => $b->as_string, }
-					} $self->ns_map->namespace_map->%* };
-				}
-			},
-		]
-	],
-);
+use constant T_NS => 'Bio_Bricks::KG::Mapping::OKGML::Model::T';
+use Module::Pluggable search_path => [T_NS], require => 1, sub_name => 't_components';
+use String::RewritePrefix rewrite => {
+	-as => 'T',
+	prefixes => { '' => T_NS.'::', '+' => '' },
+};
+our @T_COMPONENTS = __PACKAGE__->t_components;
 
 rw _data_prefixes => (
 	required => 0,
-	default  => method() { $self->new_prefixes },
+	default  => method() { T('Prefixes')->new },
 );
 
 rw _data_meta => (

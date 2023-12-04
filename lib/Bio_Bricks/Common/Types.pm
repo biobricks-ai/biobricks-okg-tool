@@ -5,6 +5,7 @@ use Type::Library 0.008 -base,
 	-declare => [qw(
 		ParquetPath
 		DuckDBQuery
+		PrefixedQName
 	)];
 use Type::Utils -all;
 
@@ -50,5 +51,12 @@ declare ParquetPath => as Path,
 	where { $_ =~ qr/\.parquet$/ };
 
 declare DuckDBQuery => as Str;
+
+=type PrefixedQName
+
+A QName with a prefix part.
+
+=cut
+declare PrefixedQName => as StrMatch[ qr/\A \w+ : \w+ \z/x ];
 
 1;
