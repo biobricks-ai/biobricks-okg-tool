@@ -1,11 +1,13 @@
 package Bio_Bricks::KG::Mapping::OKGML::Model::T::Class;
 # ABSTRACT: Class component of mapping model
 
+use namespace::autoclean;
 use Mu;
 use Bio_Bricks::Common::Setup;
-use Bio_Bricks::Common::Types qw( ArrayRef Str StrMatch Iri PrefixedQName );
+use Bio_Bricks::Common::Types qw( ArrayRef Str StrMatch InstanceOf Iri PrefixedQName );
 
 use IRI;
+use URI::Template;
 
 # classes:
 #   Dict[
@@ -50,8 +52,9 @@ ro prefix => (
 );
 
 ro uri => (
-	required => 0,
-	isa => Str,
+	required  => 0,
+	isa       => InstanceOf['URI::Template'],
+	coerce    => sub { URI::Template->new( $_[0] ) },
 	predicate => 1,
 );
 
