@@ -25,6 +25,7 @@ ro namespaces => (
 );
 
 ro store => (
+	isa => ConsumerOf['Attean::API::Store'],
 	default => sub {
 		Attean->get_store('SimpleTripleStore')->new();
 	},
