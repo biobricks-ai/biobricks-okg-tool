@@ -4,13 +4,16 @@ package Bio_Bricks::KG::Mapping::OKGML::Model;
 use strict;
 use warnings;
 
+use namespace::autoclean -except => [ 't_components' ];
 use Mu;
 use Bio_Bricks::Common::Setup;
-use Bio_Bricks::Common::Types qw( HashRef ArrayRef AbsDir );
+use Bio_Bricks::Common::Types qw( HashRef ArrayRef AbsDir Map Str InstanceOf );
 use Clone qw(clone);
+use Const::Fast;
 
 use Sub::HandlesVia;
 use PerlX::Maybe qw(provided_deref);
+use List::Util qw(pairs);
 
 use constant T_NS => 'Bio_Bricks::KG::Mapping::OKGML::Model::T';
 use Module::Pluggable search_path => [T_NS], require => 1, sub_name => 't_components';
@@ -36,24 +39,27 @@ rw _data_meta => (
 	},
 );
 
-rw [ qw(
-	_data_datasets
-	_data_classes
-	_data_values
-) ] => (
-	required => 0,
-	isa      => HashRef,
-	default  => method() { +{} },
+const my %T_MAPPING => (
+	classes  => T('Class'),
+	datasets => T('Dataset'),
+	values   => T('Value'),
+	mappings => T('Mapping'),
 );
 
-
-rw [ qw(
-	_data_mappings
-) ] => (
-	required => 0,
-	isa      => ArrayRef,
-	default  => method() { [] },
-);
+for my $type (keys %T_MAPPING) {
+	rw "_data_$type" => (
+		required => 0,
+		$T_MAPPING{$type}->does(T('Role::FromMapping'))
+		? (
+			isa      => Map[ Str , InstanceOf[$T_MAPPING{$type}] ],
+			default  => method() { +{} },
+		)
+		: (
+			isa      => ArrayRef[ InstanceOf[$T_MAPPING{$type}] ],
+			default  => method() { [] },
+		)
+	);
+}
 
 method TO_HASH() {
 	return +{
@@ -96,10 +102,10 @@ classmethod FROM_HASH($data) {
 		)
 	);
 
-	for my $key (qw(datasets classes values)) {
+	for my $key (sort keys %T_MAPPING) {
 		my $func = "_data_$key";
 		$self->$func(
-			delete $c->{$key},
+			$T_MAPPING{$key}->FROM_COLLECTION( delete $c->{$key} ),
 		) if exists $c->{$key};
 	}
 
@@ -120,7 +126,7 @@ method add_dataset( :$dataset, :$base_dir ) {
 		my $schema = $input->schema;
 		my %columns_by_name = map { $_->name => $_ } $schema->columns->@*;
 		for my $column ($schema->columns->@*) {
-			push $init->{$input_name}{elements}->@*, {
+			push $init->{inputs}{$input_name}{elements}->@*, {
 				$column->name => {
 					columns => [ $column->name ],
 					mapper  => {
@@ -134,7 +140,7 @@ method add_dataset( :$dataset, :$base_dir ) {
 			};
 		}
 	}
-	$self->_data_datasets->{ $dataset->name } = $init;
+	$self->_data_datasets->{ $dataset->name } = $T_MAPPING{'datasets'}->new( name => $dataset->name, %$init );
 }
 
 1;

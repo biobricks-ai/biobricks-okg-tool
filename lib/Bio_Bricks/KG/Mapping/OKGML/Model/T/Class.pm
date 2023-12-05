@@ -5,6 +5,8 @@ use Mu;
 use Bio_Bricks::Common::Setup;
 use Bio_Bricks::Common::Types qw( ArrayRef Str StrMatch Iri PrefixedQName );
 
+use IRI;
+
 # classes:
 #   Dict[
 #     description => Optional[Str],
@@ -30,7 +32,15 @@ ro description => (
 );
 
 ro types => (
-	isa => ArrayRef[ Iri | PrefixedQName ],
+	isa    => ArrayRef[ Iri | PrefixedQName ],
+	coerce =>
+		sub {
+			[ map {
+				$_ =~ m{\Ahttps?://}
+				?  IRI->new( $_ )
+				: $_
+			} $_[0]->@* ]
+		},
 );
 
 ro prefix => (
@@ -41,8 +51,12 @@ ro prefix => (
 
 ro uri => (
 	required => 0,
-	isa => Iri,
+	isa => Str,
 	predicate => 1,
+);
+
+with qw(
+	Bio_Bricks::KG::Mapping::OKGML::Model::T::Role::FromMapping
 );
 
 1;

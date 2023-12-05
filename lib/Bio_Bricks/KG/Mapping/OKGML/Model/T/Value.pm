@@ -3,7 +3,11 @@ package Bio_Bricks::KG::Mapping::OKGML::Model::T::Value;
 
 use Mu;
 use Bio_Bricks::Common::Setup;
-use Bio_Bricks::Common::Types qw( StrMatch );
+use Bio_Bricks::Common::Types qw( Str StrMatch );
+
+ro name => (
+	isa => Str,
+);
 
 # values:
 #   Dict[
@@ -13,6 +17,10 @@ use Bio_Bricks::Common::Types qw( StrMatch );
 ro datatype => (
 	required => 0,
 	isa => StrMatch[ qr/\Axsd:(?:string|integer)\z/ ],
+);
+
+with qw(
+	Bio_Bricks::KG::Mapping::OKGML::Model::T::Role::FromMapping
 );
 
 1;
