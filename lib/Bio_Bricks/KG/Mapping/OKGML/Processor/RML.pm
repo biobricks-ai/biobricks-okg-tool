@@ -77,6 +77,15 @@ method _rml_subject_map_po($mc) {
 		qname('rr:template'), literal( $class->rml_template( $mc->model, $mc->element ) ),    #;
 		qname('rr:class')   , olist( $class->types_to_attean_iri($mc->model) )
 	],#;
+}
+
+method _rml_maybe_valuelabel_po($mc) {
+	return () unless $mc->element->mapper->can('label_predicate_to_attean_iri');
+
+	return qname('rr:predicateObjectMap'), bnode [
+		qname('rr:predicate'), $mc->element->mapper->label_predicate_to_attean_iri($self->rml_context, $mc->model)  ,#;
+		qname('rr:objectMap'), bnode [ qname('rml:reference'), literal($mc->element->columns->[0]) ]      ,#;
+	],#
 
 }
 
@@ -94,32 +103,20 @@ method generate_rml($MapperContext_curry, $elements) {
 			qname('rml:source')               , literal($mc_null->input->name ) ,#;
 			qname('rml:referenceFormulation') , qname('ql:CSV')                 ;#.
 
-		my @classes = grep { $_->mapper isa 'Bio_Bricks::KG::Mapping::OKGML::Mapper::Class' } @$elements;
+		my @classes = grep {
+			$_->mapper isa 'Bio_Bricks::KG::Mapping::OKGML::Mapper::Class'
+			or $_->mapper isa 'Bio_Bricks::KG::Mapping::OKGML::Mapper::ValueLabel'
+		} @$elements;
 		for my $class_element (@classes) {
 			my $mc = $MapperContext_curry->( element => $class_element );
 
 			collect bnode [
 				a()                       , qname('rr:TriplesMap') ,#;
 				qname('rml:logicalSource'), $logical_source        ,#;
-				$self->_rml_subject_map_po($mc)                    ,#
+				$self->_rml_subject_map_po($mc)                    ,#;
+				$self->_rml_maybe_valuelabel_po($mc)               ,#
 			];#.
 		}
-
-		my @value_labels = grep { $_->mapper isa 'Bio_Bricks::KG::Mapping::OKGML::Mapper::ValueLabel' } @$elements;
-		for my $value_label_element (@value_labels) {
-			my $mc = $MapperContext_curry->( element => $value_label_element );
-
-			collect bnode [
-				a()                       , qname('rr:TriplesMap') ,#;
-				qname('rml:logicalSource'), $logical_source        ,#;
-				$self->_rml_subject_map_po($mc)                    ,#
-				qname('rr:predicateObjectMap'), bnode [
-					qname('rr:predicate'), $mc->element->mapper->label_predicate_to_attean_iri($self->rml_context, $mc->model)  ,#;
-					qname('rr:objectMap'), bnode [ qname('rml:reference'), literal($mc->element->columns->[0]) ]      ,#;
-				],#
-			];#.
-		}
-
 
 		my $graph  = Attean::IRI->new('http://example.org/graph');
 		my $store  = Attean->get_store('Memory')->new();
