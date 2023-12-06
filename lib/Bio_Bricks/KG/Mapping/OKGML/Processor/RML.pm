@@ -53,7 +53,7 @@ lazy uri_map => method() {
 	$map;
 };
 
-method _rml_logical_source( $mc ) {
+method _rml_logical_source_subject( $mc ) {
 	my $logical_source = iri(join '_',
 		'ls',
 		$mc->dataset->name,
@@ -67,30 +67,33 @@ method generate_rml($MapperContext_curry, $elements) {
 	rdf {
 		context( $self->rml_context );
 
+		my $mc_null = $MapperContext_curry->( element => undef );
+
+		# logical source shared with all below
+		my $logical_source = $self->_rml_logical_source_subject($mc_null);
+
+		collect turtle_map $logical_source,
+			a()                               , qname('rml:LogicalSource')      ,#;
+			qname('rml:source')               , literal($mc_null->input->name ) ,#;
+			qname('rml:referenceFormulation') , qname('ql:CSV')                 ;#.
+
 		my @classes = grep { $_->mapper isa 'Bio_Bricks::KG::Mapping::OKGML::Mapper::Class' } @$elements;
 		for my $class_element (@classes) {
 			my $mc = $MapperContext_curry->( element => $class_element );
-			die <<~ERROR unless $mc->model->has_class( $class_element->mapper->class );
+			die <<~ERROR unless $mc->model->has_class( $mc->element->mapper->class );
 			Missing class:
 			  dataset  : @{[ $mc->dataset->name ]}
 			  input    : @{[ $mc->input->name ]}
-			  element  : @{[ $class_element->name ]}
-			  class    : @{[ $class_element->mapper->class ]}
+			  element  : @{[ $mc->element->name ]}
+			  class    : @{[ $mc->element->mapper->class ]}
 			ERROR
 
-			my $logical_source = $self->_rml_logical_source($mc);
-
-			collect turtle_map $logical_source,
-				a()                               , qname('rml:LogicalSource')      ,#;
-				qname('rml:source')               , literal($mc->input->name )      ,#;
-				qname('rml:referenceFormulation') , qname('ql:CSV')                 ;#.
-
-			my $class = $mc->model->get_class( $class_element->mapper->class );
+			my $class = $mc->model->get_class( $mc->element->mapper->class );
 			collect bnode [
 				a()                       , qname('rr:TriplesMap') ,#;
 				qname('rml:logicalSource'), $logical_source        ,#;
 				qname('rr:subjectMap')    , bnode [
-					qname('rr:template'), literal( $class->rml_template( $mc->model, $class_element ) ),    #;
+					qname('rr:template'), literal( $class->rml_template( $mc->model, $mc->element ) ),    #;
 					qname('rr:class')   , olist( $class->types_to_attean_iri($mc->model) )
 				],#;
 			];#.
@@ -100,37 +103,29 @@ method generate_rml($MapperContext_curry, $elements) {
 		for my $value_label_element (@value_labels) {
 			my $mc = $MapperContext_curry->( element => $value_label_element );
 
-			die <<~ERROR unless $mc->model->has_class( $value_label_element->mapper->class );
+			die <<~ERROR unless $mc->model->has_class( $mc->element->mapper->class );
 			Missing class:
 			  dataset  : @{[ $mc->dataset->name ]}
 			  input    : @{[ $mc->input->name ]}
-			  element  : @{[ $value_label_element->name ]}
-			  class    : @{[ $value_label_element->mapper->class ]}
+			  element  : @{[ $mc->element->name ]}
+			  class    : @{[ $mc->element->mapper->class ]}
 			ERROR
 
-			my $logical_source = $self->_rml_logical_source($mc);
-
-			collect turtle_map $logical_source,
-				a()                               , qname('rml:LogicalSource')      ,#;
-				qname('rml:source')               , literal($mc->input->name )      ,#;
-				qname('rml:referenceFormulation') , qname('ql:CSV')                 ;#.
-
-			my $class = $mc->model->get_class( $value_label_element->mapper->class );
+			my $class = $mc->model->get_class( $mc->element->mapper->class );
 			collect bnode [
 				a()                       , qname('rr:TriplesMap') ,#;
 				qname('rml:logicalSource'), $logical_source        ,#;
 				qname('rr:subjectMap')    , bnode [
-					qname('rr:template'), literal( $class->rml_template( $mc->model, $value_label_element ) ),    #;
+					qname('rr:template'), literal( $class->rml_template( $mc->model, $mc->element ) ),    #;
 					qname('rr:class')   , olist( $class->types_to_attean_iri($mc->model) )
 				],#;
 				qname('rr:predicateObjectMap'), bnode [
-					qname('rr:predicate'), $value_label_element->mapper->label_predicate_to_attean_iri($self->rml_context, $mc->model)  ,#;
-					qname('rr:objectMap'), bnode [ qname('rml:reference'), literal($value_label_element->columns->[0]) ]      ,#;
+					qname('rr:predicate'), $mc->element->mapper->label_predicate_to_attean_iri($self->rml_context, $mc->model)  ,#;
+					qname('rr:objectMap'), bnode [ qname('rml:reference'), literal($mc->element->columns->[0]) ]      ,#;
 				],#
 			];#.
 		}
 
-		my $mc_null = $MapperContext_curry->( element => undef );
 
 		my $graph  = Attean::IRI->new('http://example.org/graph');
 		my $store  = Attean->get_store('Memory')->new();
