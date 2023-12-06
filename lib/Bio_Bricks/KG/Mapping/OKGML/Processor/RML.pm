@@ -89,6 +89,23 @@ method _rml_maybe_valuelabel_po($mc) {
 
 }
 
+lazy _rdf_mapping_model => method() {
+	my $graph  = Attean::IRI->new('http://example.org/graph');
+	my $store  = Attean->get_store('Memory')->new();
+	my $model = Attean::QuadModel->new( store => $store );
+	my $parser = Attean->get_parser('Turtle')->new();
+
+	my $turtle_buffer = join "\n",
+			$self->model->_data_prefixes->to_turtle_prefixes,
+			$self->model->get_mappings->@*;
+	my $iter = $parser->parse_iter_from_bytes( $turtle_buffer );
+	my $quads = $iter->as_quads($graph);
+
+	$store->add_iter($quads);
+
+	return $model;
+};
+
 method generate_rml($MapperContext_curry, $elements) {
 	my $dce = URI::Namespace
 		->with::roles('Bio_Bricks::KG::Role::LazyIRIable')
@@ -123,18 +140,6 @@ method generate_rml($MapperContext_curry, $elements) {
 			];#.
 		}
 
-		my $graph  = Attean::IRI->new('http://example.org/graph');
-		my $store  = Attean->get_store('Memory')->new();
-		my $model = Attean::QuadModel->new( store => $store );
-		my $parser = Attean->get_parser('Turtle')->new();
-
-		my $turtle_buffer = join "\n",
-				$mc_null->model->_data_prefixes->to_turtle_prefixes,
-				$mc_null->model->get_mappings->@*;
-		my $iter = $parser->parse_iter_from_bytes( $turtle_buffer );
-		my $quads = $iter->as_quads($graph);
-
-		$store->add_iter($quads);
 	};
 }
 
