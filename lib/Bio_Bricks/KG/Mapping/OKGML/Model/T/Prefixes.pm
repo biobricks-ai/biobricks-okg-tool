@@ -3,15 +3,21 @@ package Bio_Bricks::KG::Mapping::OKGML::Model::T::Prefixes;
 
 use Mu;
 use Bio_Bricks::Common::Setup;
-use Bio_Bricks::Common::Types qw( InstanceOf );
+use Bio_Bricks::Common::Types qw( InstanceOf ConsumerOf );
 
 use Clone qw(clone);
 use URI::NamespaceMap;
 use List::Util qw(pairmap);
 
 ro ns_map => (
-	isa     => InstanceOf['URI::NamespaceMap'],
-	default => sub { URI::NamespaceMap->new; },
+	isa     => InstanceOf['URI::NamespaceMap'] & ConsumerOf['Bio_Bricks::KG::Role::LazyIRIable'],
+	default =>
+		sub {
+			URI::NamespaceMap
+				->with::roles(qw(Bio_Bricks::KG::Role::LazyIRIable))
+				->new;
+		},
+
 );
 
 method is_empty() {

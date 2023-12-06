@@ -59,7 +59,7 @@ method types_to_attean_iri( $model ) {
 	map {
 		$_ isa IRI
 		? Attean::IRI->new( $_->as_string )
-		: Attean::IRI->new( $model->_data_prefixes->ns_map->uri( $_ )->as_string )
+		: $model->_data_prefixes->ns_map->lazy_iri( $_ )
 	} $self->types->@*
 }
 
