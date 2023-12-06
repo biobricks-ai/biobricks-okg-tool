@@ -9,15 +9,19 @@ use Bio_Bricks::Common::Setup;
 use Bio_Bricks::Common::Types qw(
 	Path AbsDir
 );
-use String::CamelCase qw(decamelize);
 
 use Bio_Bricks::DuckDB;
 use Bio_Bricks::RDF::DSL;
 use Bio_Bricks::RDF::DSL::Types qw(RDF_DSL_Context);
 
+use Bio_Bricks::KG::Mapping::Util qw(
+	normalize_column_name
+	normalize_dataset_name
+	normalize_table_name
+);
+
 use Attean;
 use URI::NamespaceMap;
-use URI::Encode qw(uri_encode);
 use Devel::StrictMode qw(LAX);
 use Path::Iterator::Rule;
 use File::Spec;
@@ -83,38 +87,6 @@ lazy uri_map => method() {
 		'ex-base' => $self->_base_uri,
 	})->$_tap( guess_and_add => qw(rdf rdfs xsd) );
 };
-
-fun normalize_column_name($column_name) {
-	# Spaces to underscores
-	$column_name =~ s/\s/_/g;
-
-	# Fix use of `FooIDs` to `FooIds` so that it gets decamelize'd
-	# properly:
-	#
-	#   FooIDs -> foo_i_ds
-	#   FooIds -> foo_ids
-	$column_name =~ s/(?<=[_a-z])IDs(?=\z|[_A-Z])/_Ids/g;
-
-	$column_name = decamelize($column_name);
-
-	$column_name = uri_encode($column_name);
-
-	return $column_name;
-}
-
-fun normalize_generic($string) {
-	# Spaces to underscores
-	$string =~ s/\s/_/g;
-	$string = uri_encode($string);
-	return $string;
-}
-
-fun normalize_table_name($table_name) {
-	return normalize_generic($table_name);
-}
-fun normalize_dataset_name($dataset_name) {
-	return normalize_generic($dataset_name);
-}
 
 use MooX::Struct TableSpec => [
 	qw/$dataset_name! $table_name! @column_names! @primary_keys! $source_file!/
