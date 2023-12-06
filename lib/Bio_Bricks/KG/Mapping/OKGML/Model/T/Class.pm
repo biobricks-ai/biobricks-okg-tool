@@ -4,7 +4,10 @@ package Bio_Bricks::KG::Mapping::OKGML::Model::T::Class;
 use namespace::autoclean;
 use Mu;
 use Bio_Bricks::Common::Setup;
-use Bio_Bricks::Common::Types qw( ArrayRef Str StrMatch InstanceOf Iri PrefixedQName );
+use Bio_Bricks::Common::Types qw( ArrayRef Str StrMatch InstanceOf
+	IriOrPrefixedQName
+	IriOrPrefixedQNameFromStr
+);
 
 use IRI;
 use URI::Template;
@@ -35,15 +38,8 @@ ro description => (
 );
 
 ro types => (
-	isa    => ArrayRef[ Iri | PrefixedQName ],
-	coerce =>
-		sub {
-			[ map {
-				$_ =~ m{\Ahttps?://}
-				?  IRI->new( $_ )
-				: $_
-			} $_[0]->@* ]
-		},
+	isa    => ArrayRef[ IriOrPrefixedQName->plus_coercions( IriOrPrefixedQNameFromStr ) ],
+	coerce => 1,
 );
 
 ro prefix => (

@@ -6,6 +6,8 @@ use Type::Library 0.008 -base,
 		ParquetPath
 		DuckDBQuery
 		PrefixedQName
+		IriOrPrefixedQName
+		IriOrPrefixedQNameFromStr
 	)];
 use Type::Utils -all;
 
@@ -17,7 +19,7 @@ use Types::Common          qw(
 );
 use Types::Common::Numeric qw();
 use Types::Path::Tiny      qw(Path);
-use Types::URI             qw();
+use Types::URI             qw(Iri);
 use Types::Attean          qw();
 
 use Type::Libraries;
@@ -57,6 +59,13 @@ declare DuckDBQuery => as Str;
 A QName with a prefix part.
 
 =cut
-declare PrefixedQName => as StrMatch[ qr/\A \w+ : \w+ \z/x ];
+my $PrefixedQName = declare PrefixedQName => as StrMatch[ qr/\A \w+ : \w+ \z/x ];
+
+union IriOrPrefixedQName => [ Iri , $PrefixedQName ];
+declare_coercion IriOrPrefixedQNameFromStr => from Str, via {
+	$_ =~ m{\Ahttps?://}
+	?  IRI->new( $_ )
+	: $_
+};
 
 1;
