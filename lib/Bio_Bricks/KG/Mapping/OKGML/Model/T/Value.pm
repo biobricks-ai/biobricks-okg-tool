@@ -3,10 +3,10 @@ package Bio_Bricks::KG::Mapping::OKGML::Model::T::Value;
 
 use Mu;
 use Bio_Bricks::Common::Setup;
-use Bio_Bricks::Common::Types qw( Str StrMatch );
+use Bio_Bricks::Common::Types qw( IriableName StrMatch );
 
 ro name => (
-	isa => Str,
+	isa => IriableName,
 );
 
 # values:

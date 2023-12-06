@@ -7,6 +7,7 @@ use Bio_Bricks::Common::Setup;
 use Bio_Bricks::Common::Types qw( ArrayRef Str StrMatch InstanceOf
 	IriOrPrefixedQName
 	IriOrPrefixedQNameFromStr
+	IriableName
 );
 
 use IRI;
@@ -29,7 +30,7 @@ use URI::Escape qw(uri_unescape);
 #        ## where Uri is actually a URI template
 #   ]
 ro name => (
-	isa => Str,
+	isa => IriableName,
 );
 
 ro description => (

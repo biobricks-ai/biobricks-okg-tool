@@ -8,6 +8,7 @@ use Type::Library 0.008 -base,
 		PrefixedQName
 		IriOrPrefixedQName
 		IriOrPrefixedQNameFromStr
+		IriableName
 	)];
 use Type::Utils -all;
 
@@ -67,5 +68,7 @@ declare_coercion IriOrPrefixedQNameFromStr => from Str, via {
 	?  IRI->new( $_ )
 	: $_
 };
+
+declare IriableName => as StrMatch[ qr/\A\w+\z/];
 
 1;
