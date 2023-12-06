@@ -13,7 +13,7 @@ use String::RewritePrefix rewrite => {
 };
 
 
-use MooX::Struct
+use MooX::Struct -retain,
 	Element => [
 		name    =>  [ isa => Str ],
 		columns =>  [ isa => ArrayRef[Str, 1] ],
@@ -28,7 +28,7 @@ use MooX::Struct
 		],
 		-with    => [ qw(Bio_Bricks::KG::Mapping::OKGML::Model::T::Role::FromSingletonSeqMap) ],
 	];
-use MooX::Struct
+use MooX::Struct -retain,
 	Input => [
 		name     => [ isa => Str ],
 		elements => [

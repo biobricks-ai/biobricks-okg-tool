@@ -11,6 +11,8 @@ use Bio_Bricks::RDF::DSL;
 use Bio_Bricks::RDF::DSL::Types qw(RDF_DSL_Context);
 use URI::NamespaceMap;
 
+use aliased 'Bio_Bricks::KG::Mapping::OKGML::MapperContext' => 'MapperContext';
+
 use Data::DPath qw(dpath);
 
 ro model => (
@@ -49,38 +51,38 @@ lazy uri_map => method() {
 	$map;
 };
 
-method generate_rml($dataset, $input, $elements) {
+method generate_rml($mc, $elements) {
 	rdf {
 		context( $self->rml_context );
 
 		my $logical_source = iri(join '_',
 			'ls',
-			$dataset->name,
-			$input->name =~ s,/,_,gr
+			$mc->dataset->name,
+			$mc->input->name =~ s,/,_,gr
 		);
 
 		collect turtle_map $logical_source,
 			a()                               , qname('rml:LogicalSource')      ,#;
-			qname('rml:source')               , literal($input->name )          ,#;
+			qname('rml:source')               , literal($mc->input->name )      ,#;
 			qname('rml:referenceFormulation') , qname('ql:CSV')                 ;#.
 
 
 		my @classes = grep { $_->mapper isa 'Bio_Bricks::KG::Mapping::OKGML::Mapper::Class' } @$elements;
 		for my $class_element (@classes) {
-			die <<~ERROR unless $self->model->has_class( $class_element->mapper->class );
+			die <<~ERROR unless $mc->model->has_class( $class_element->mapper->class );
 			Missing class:
-			  dataset  : @{[ $dataset->name ]}
-			  input    : @{[ $input->name ]}
+			  dataset  : @{[ $mc->dataset->name ]}
+			  input    : @{[ $mc->input->name ]}
 			  element  : @{[ $class_element->name ]}
 			  class    : @{[ $class_element->mapper->class ]}
 			ERROR
-			my $class = $self->model->get_class( $class_element->mapper->class );
+			my $class = $mc->model->get_class( $class_element->mapper->class );
 			collect bnode [
 				a()                       , qname('rr:TriplesMap') ,#;
 				qname('rml:logicalSource'), $logical_source        ,#;
 				qname('rr:subjectMap')    , bnode [
-					qname('rr:template'), literal( $class->rml_template( $self->model, $class_element ) ),    #;
-					qname('rr:class')   , olist( $class->types_to_attean_iri($self->model) )
+					qname('rr:template'), literal( $class->rml_template( $mc->model, $class_element ) ),    #;
+					qname('rr:class')   , olist( $class->types_to_attean_iri($mc->model) )
 				],#;
 			];#.
 		}
@@ -97,7 +99,13 @@ lazy triple_store =>
 				my @elements = grep { ! $_->mapper->isa('Bio_Bricks::KG::Mapping::OKGML::Mapper::Null') }
 					dpath('/elements/*/mapper/..')->match($input);
 				next unless @elements;
-				$self->generate_rml( $dataset, $input, \@elements );
+				my $mc = MapperContext->new(
+					model   => $self->model,
+					dataset => $dataset,
+					input   => $input,
+				);
+
+				$self->generate_rml( $mc, \@elements );
 			}
 		}
 
