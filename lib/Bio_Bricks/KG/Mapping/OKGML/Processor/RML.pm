@@ -13,6 +13,7 @@ use Bio_Bricks::RDF::DSL::Types qw(RDF_DSL_Context);
 use URI::NamespaceMap;
 
 use aliased 'Bio_Bricks::KG::Mapping::OKGML::MapperContext' => 'MapperContext';
+use Bio_Bricks::KG::Mapping::OKGML::Mapper::Null;
 
 use Data::DPath qw(dpath);
 
@@ -128,6 +129,21 @@ method generate_rml($MapperContext_curry, $elements) {
 				],#
 			];#.
 		}
+
+		my $mc_null = $MapperContext_curry->( element => undef );
+
+		my $graph  = Attean::IRI->new('http://example.org/graph');
+		my $store  = Attean->get_store('Memory')->new();
+		my $model = Attean::QuadModel->new( store => $store );
+		my $parser = Attean->get_parser('Turtle')->new();
+
+		my $turtle_buffer = join "\n",
+				$mc_null->model->_data_prefixes->to_turtle_prefixes,
+				$mc_null->model->get_mappings->@*;
+		my $iter = $parser->parse_iter_from_bytes( $turtle_buffer );
+		my $quads = $iter->as_quads($graph);
+
+		$store->add_iter($quads);
 	};
 }
 
