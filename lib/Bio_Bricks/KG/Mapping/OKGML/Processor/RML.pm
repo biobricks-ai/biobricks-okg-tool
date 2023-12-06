@@ -90,6 +90,9 @@ method _rml_maybe_valuelabel_po($mc) {
 }
 
 method generate_rml($MapperContext_curry, $elements) {
+	my $dce = URI::Namespace
+		->with::roles('Bio_Bricks::KG::Role::LazyIRIable')
+		->new('http://purl.org/dc/elements/1.1/');
 	rdf {
 		context( $self->rml_context );
 
@@ -99,9 +102,11 @@ method generate_rml($MapperContext_curry, $elements) {
 		my $logical_source = $self->_rml_logical_source_subject($mc_null);
 
 		collect turtle_map $logical_source,
-			a()                               , qname('rml:LogicalSource')      ,#;
-			qname('rml:source')               , literal($mc_null->input->name ) ,#;
-			qname('rml:referenceFormulation') , qname('ql:CSV')                 ;#.
+			a()                               , qname('rml:LogicalSource')       ,#;
+			$dce->lazy_iri('source')          , literal($mc_null->dataset->name) ,#;
+			$dce->lazy_iri('title')           , literal($mc_null->input->name)   ,#;
+			qname('rml:source')               , literal($mc_null->input->name )  ,#;
+			qname('rml:referenceFormulation') , qname('ql:CSV')                  ;#.
 
 		my @classes = grep {
 			$_->mapper isa 'Bio_Bricks::KG::Mapping::OKGML::Mapper::Class'
