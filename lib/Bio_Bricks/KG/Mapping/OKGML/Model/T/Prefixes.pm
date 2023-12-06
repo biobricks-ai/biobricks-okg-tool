@@ -24,6 +24,13 @@ method is_empty() {
 	0 == $self->ns_map->list_prefixes;
 }
 
+method to_turtle_prefixes() {
+	my $store = Attean->get_store('SimpleTripleStore')->new();
+	return Attean->get_serializer( 'Turtle' )
+		->new( namespaces => $self->ns_map )
+		->serialize_iter_to_bytes( $store->get_triples );
+}
+
 classmethod FROM_HASH($data) {
 	my $c = clone($data);
 	my $self = $class->new;
