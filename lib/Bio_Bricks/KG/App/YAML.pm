@@ -6,5 +6,6 @@ use CLI::Osprey;
 
 subcommand 'process' => 'Bio_Bricks::KG::App::YAML::Processor';
 subcommand 'template' => 'Bio_Bricks::KG::App::YAML::Templater';
+subcommand 'editor' => 'Bio_Bricks::KG::App::YAML::Editor';
 
 1;

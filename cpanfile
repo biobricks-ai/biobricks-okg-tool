@@ -5,6 +5,8 @@ requires 'CLI::Osprey';
 requires 'Capture::Tiny';
 requires 'Clone';
 requires 'Const::Fast';
+requires 'Curses::UI';
+requires 'Curses::UI::Grid';
 requires 'Data::DPath';
 requires 'Data::Dumper';
 requires 'Data::TableReader';
