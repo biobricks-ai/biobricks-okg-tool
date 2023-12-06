@@ -86,6 +86,30 @@ method generate_rml($mc, $elements) {
 				],#;
 			];#.
 		}
+
+		my @value_labels = grep { $_->mapper isa 'Bio_Bricks::KG::Mapping::OKGML::Mapper::ValueLabel' } @$elements;
+		for my $value_label_element (@value_labels) {
+			die <<~ERROR unless $mc->model->has_class( $value_label_element->mapper->class );
+			Missing class:
+			  dataset  : @{[ $mc->dataset->name ]}
+			  input    : @{[ $mc->input->name ]}
+			  element  : @{[ $value_label_element->name ]}
+			  class    : @{[ $value_label_element->mapper->class ]}
+			ERROR
+			my $class = $mc->model->get_class( $value_label_element->mapper->class );
+			collect bnode [
+				a()                       , qname('rr:TriplesMap') ,#;
+				qname('rml:logicalSource'), $logical_source        ,#;
+				qname('rr:subjectMap')    , bnode [
+					qname('rr:template'), literal( $class->rml_template( $mc->model, $value_label_element ) ),    #;
+					qname('rr:class')   , olist( $class->types_to_attean_iri($mc->model) )
+				],#;
+				qname('rr:predicateObjectMap'), bnode [
+					qname('rr:predicate'), $value_label_element->mapper->label_predicate_to_attean_iri($self->rml_context, $mc->model)  ,#;
+					qname('rr:objectMap'), bnode [ qname('rml:reference'), literal($value_label_element->columns->[0]) ]      ,#;
+				],#
+			];#.
+		}
 	};
 }
 
