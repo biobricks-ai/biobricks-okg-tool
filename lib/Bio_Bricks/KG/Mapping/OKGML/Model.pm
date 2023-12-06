@@ -49,7 +49,8 @@ const my %T_MAPPING => (
 
 for my $type (keys %T_MAPPING) {
 	my $singular = lc( (module_name_parts($T_MAPPING{$type}))[-1] );
-	has "_data_$type" => (
+	my $attr_name = "_data_$type";
+	has $attr_name => (
 		is => 'rw',
 		required => 0,
 		$T_MAPPING{$type}->does(T('Role::FromMapping'))
@@ -65,6 +66,14 @@ for my $type (keys %T_MAPPING) {
 		: (
 			isa      => ArrayRef[ InstanceOf[$T_MAPPING{$type}] ],
 			default  => method() { [] },
+			handles_via => 'Array',
+			handles     => {
+				"get_${type}" =>
+					sub() {
+						state $type_attr_arg = $T_MAPPING{$type}->single_arg;
+						[ map { $_->$type_attr_arg } $_[0]->@* ];
+					},
+			},
 		)
 	);
 }
