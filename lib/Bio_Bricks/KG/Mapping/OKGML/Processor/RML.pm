@@ -6,6 +6,7 @@ use Object::Util magic => 0;
 use Bio_Bricks::Common::Setup;
 use Bio_Bricks::Common::Types qw( InstanceOf ConsumerOf );
 
+use curry;
 use Attean::RDF qw(iri);
 use Bio_Bricks::RDF::DSL;
 use Bio_Bricks::RDF::DSL::Types qw(RDF_DSL_Context);
@@ -51,24 +52,23 @@ lazy uri_map => method() {
 	$map;
 };
 
-method generate_rml($mc, $elements) {
+method _rml_logical_source( $mc ) {
+	my $logical_source = iri(join '_',
+		'ls',
+		$mc->dataset->name,
+		$mc->input->name =~ s,/,_,gr
+	);
+
+	return $logical_source;
+}
+
+method generate_rml($MapperContext_curry, $elements) {
 	rdf {
 		context( $self->rml_context );
 
-		my $logical_source = iri(join '_',
-			'ls',
-			$mc->dataset->name,
-			$mc->input->name =~ s,/,_,gr
-		);
-
-		collect turtle_map $logical_source,
-			a()                               , qname('rml:LogicalSource')      ,#;
-			qname('rml:source')               , literal($mc->input->name )      ,#;
-			qname('rml:referenceFormulation') , qname('ql:CSV')                 ;#.
-
-
 		my @classes = grep { $_->mapper isa 'Bio_Bricks::KG::Mapping::OKGML::Mapper::Class' } @$elements;
 		for my $class_element (@classes) {
+			my $mc = $MapperContext_curry->( element => $class_element );
 			die <<~ERROR unless $mc->model->has_class( $class_element->mapper->class );
 			Missing class:
 			  dataset  : @{[ $mc->dataset->name ]}
@@ -76,6 +76,14 @@ method generate_rml($mc, $elements) {
 			  element  : @{[ $class_element->name ]}
 			  class    : @{[ $class_element->mapper->class ]}
 			ERROR
+
+			my $logical_source = $self->_rml_logical_source($mc);
+
+			collect turtle_map $logical_source,
+				a()                               , qname('rml:LogicalSource')      ,#;
+				qname('rml:source')               , literal($mc->input->name )      ,#;
+				qname('rml:referenceFormulation') , qname('ql:CSV')                 ;#.
+
 			my $class = $mc->model->get_class( $class_element->mapper->class );
 			collect bnode [
 				a()                       , qname('rr:TriplesMap') ,#;
@@ -89,6 +97,8 @@ method generate_rml($mc, $elements) {
 
 		my @value_labels = grep { $_->mapper isa 'Bio_Bricks::KG::Mapping::OKGML::Mapper::ValueLabel' } @$elements;
 		for my $value_label_element (@value_labels) {
+			my $mc = $MapperContext_curry->( element => $value_label_element );
+
 			die <<~ERROR unless $mc->model->has_class( $value_label_element->mapper->class );
 			Missing class:
 			  dataset  : @{[ $mc->dataset->name ]}
@@ -96,6 +106,14 @@ method generate_rml($mc, $elements) {
 			  element  : @{[ $value_label_element->name ]}
 			  class    : @{[ $value_label_element->mapper->class ]}
 			ERROR
+
+			my $logical_source = $self->_rml_logical_source($mc);
+
+			collect turtle_map $logical_source,
+				a()                               , qname('rml:LogicalSource')      ,#;
+				qname('rml:source')               , literal($mc->input->name )      ,#;
+				qname('rml:referenceFormulation') , qname('ql:CSV')                 ;#.
+
 			my $class = $mc->model->get_class( $value_label_element->mapper->class );
 			collect bnode [
 				a()                       , qname('rr:TriplesMap') ,#;
@@ -123,13 +141,13 @@ lazy triple_store =>
 				my @elements = grep { ! $_->mapper->isa('Bio_Bricks::KG::Mapping::OKGML::Mapper::Null') }
 					dpath('/elements/*/mapper/..')->match($input);
 				next unless @elements;
-				my $mc = MapperContext->new(
+				my $MCtx_curry = MapperContext->curry::new(
 					model   => $self->model,
 					dataset => $dataset,
 					input   => $input,
 				);
 
-				$self->generate_rml( $mc, \@elements );
+				$self->generate_rml( $MCtx_curry, \@elements );
 			}
 		}
 

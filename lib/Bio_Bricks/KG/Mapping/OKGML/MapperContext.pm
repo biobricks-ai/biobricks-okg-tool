@@ -11,4 +11,6 @@ ro 'dataset' => ( isa => InstanceOf['Bio_Bricks::KG::Mapping::OKGML::Model::T::D
 
 ro 'input' => ( isa => Bio_Bricks::KG::Mapping::OKGML::Model::T::Dataset::Input->TYPE_TINY );
 
+ro 'element' => ( isa => Bio_Bricks::KG::Mapping::OKGML::Model::T::Dataset::Element->TYPE_TINY );
+
 1;
