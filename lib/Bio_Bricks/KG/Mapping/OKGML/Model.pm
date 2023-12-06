@@ -5,15 +5,16 @@ use strict;
 use warnings;
 
 use namespace::autoclean -except => [ 't_components' ];
-use Mu;
+use Moo;
+use MooX::ShortHas;
+use Sub::HandlesVia;
 use Bio_Bricks::Common::Setup;
 use Bio_Bricks::Common::Types qw( HashRef ArrayRef AbsDir Map Str InstanceOf );
 use Clone qw(clone);
 use Const::Fast;
 
-use Sub::HandlesVia;
 use PerlX::Maybe qw(provided_deref);
-use List::Util qw(pairs);
+use Module::Util qw(module_name_parts);
 
 use constant T_NS => 'Bio_Bricks::KG::Mapping::OKGML::Model::T';
 use Module::Pluggable search_path => [T_NS], require => 1, sub_name => 't_components';
@@ -47,12 +48,19 @@ const my %T_MAPPING => (
 );
 
 for my $type (keys %T_MAPPING) {
-	rw "_data_$type" => (
+	my $singular = lc( (module_name_parts($T_MAPPING{$type}))[-1] );
+	has "_data_$type" => (
+		is => 'rw',
 		required => 0,
 		$T_MAPPING{$type}->does(T('Role::FromMapping'))
 		? (
 			isa      => Map[ Str , InstanceOf[$T_MAPPING{$type}] ],
 			default  => method() { +{} },
+			handles_via => 'Hash',
+			handles     => {
+				"has_${singular}" => 'exists',
+				"get_${singular}" => 'get',
+			},
 		)
 		: (
 			isa      => ArrayRef[ InstanceOf[$T_MAPPING{$type}] ],

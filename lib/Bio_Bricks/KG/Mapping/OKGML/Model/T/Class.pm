@@ -8,6 +8,7 @@ use Bio_Bricks::Common::Types qw( ArrayRef Str StrMatch InstanceOf Iri PrefixedQ
 
 use IRI;
 use URI::Template;
+use URI::Escape qw(uri_unescape);
 
 # classes:
 #   Dict[
@@ -57,6 +58,27 @@ ro uri => (
 	coerce    => sub { URI::Template->new( $_[0] ) },
 	predicate => 1,
 );
+
+method types_to_attean_iri( $model ) {
+	map {
+		$_ isa IRI
+		? Attean::IRI->new( $_->as_string )
+		: Attean::IRI->new( $model->_data_prefixes->ns_map->uri( $_ )->as_string )
+	} $self->types->@*
+}
+
+method rml_template( $model, $element ) {
+	return "TODO" if $element->columns->@* > 1;
+	if( $self->has_prefix ) {
+		$model->_data_prefixes
+			->ns_map->namespace_uri( $self->prefix )
+			->iri->as_string . "{@{[ $element->columns->[0] ]}}";
+	} elsif( $self->has_uri ) {
+		uri_unescape $self->uri->process_to_string(
+			value => "{@{[ $element->columns->[0] ]}}",
+		);
+	}
+}
 
 with qw(
 	Bio_Bricks::KG::Mapping::OKGML::Model::T::Role::FromMapping

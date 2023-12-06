@@ -2,14 +2,30 @@ package Bio_Bricks::KG::Mapping::OKGML::Model::T::Dataset;
 # ABSTRACT: Dataset component of mappping model
 
 use Mu;
+use Object::Util magic => 0;
 use Bio_Bricks::Common::Setup;
-use Bio_Bricks::Common::Types qw( Str ArrayRef HashRef );
+use Bio_Bricks::Common::Types qw( Str ArrayRef HashRef ConsumerOf );
+
+use constant T_Mapper => 'Bio_Bricks::KG::Mapping::OKGML::Mapper';
+use String::RewritePrefix rewrite => {
+	-as => 'Mapper',
+	prefixes => { '' => T_Mapper.'::', '+' => '' },
+};
+
 
 use MooX::Struct
 	Element => [
 		name    =>  [ isa => Str ],
 		columns =>  [ isa => ArrayRef[Str, 1] ],
-		mapper  =>  [ isa => HashRef          ],
+		mapper  =>  [
+			isa => ConsumerOf['Bio_Bricks::KG::Mapping::OKGML::Role::Mapper'],
+			coerce => sub {
+				my $Name = keys $_[0]->%* == 1
+					? (keys $_[0]->%*)[0]
+					: 'Null';
+				return Mapper($Name)->$_new( $_[0]->{$Name} // () );
+			},
+		],
 		-with    => [ qw(Bio_Bricks::KG::Mapping::OKGML::Model::T::Role::FromSingletonSeqMap) ],
 	];
 use MooX::Struct

@@ -7,6 +7,7 @@ use CLI::Osprey
 
 use Bio_Bricks::Common::Setup;
 use Bio_Bricks::KG::Mapping::OKGML::Model;
+use Bio_Bricks::KG::Mapping::OKGML::Processor::RML;
 use Bio_Bricks::Common::Types qw( AbsFile );
 
 use YAML qw(LoadFile);
@@ -29,8 +30,14 @@ method run() {
 	my $model = Bio_Bricks::KG::Mapping::OKGML::Model->FROM_HASH(
 		$data
 	);
+	my $rml = Bio_Bricks::KG::Mapping::OKGML::Processor::RML->new(
+		model => $model,
+	);
 
-	use DDP;p $model;
+	my $output_fh = \*STDOUT;
+	Attean->get_serializer( 'Turtle' )
+		->new( namespaces => $rml->rml_context->namespaces )
+		->serialize_iter_to_io( $output_fh, $rml->triple_store->get_triples );
 }
 
 1;
