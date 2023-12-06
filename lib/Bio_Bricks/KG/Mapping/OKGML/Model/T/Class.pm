@@ -66,13 +66,16 @@ method types_to_attean_iri( $model ) {
 method rml_template( $model, $element ) {
 	return "TODO" if $element->columns->@* > 1;
 	if( $self->has_prefix ) {
-		$model->_data_prefixes
+		return $model->_data_prefixes
 			->ns_map->namespace_uri( $self->prefix )
 			->iri->as_string . "{@{[ $element->columns->[0] ]}}";
 	} elsif( $self->has_uri ) {
-		uri_unescape $self->uri->process_to_string(
+		return uri_unescape $self->uri->process_to_string(
 			value => "{@{[ $element->columns->[0] ]}}",
 		);
+	} else {
+		# neither
+		return 'TODO'; # TODO
 	}
 }
 
