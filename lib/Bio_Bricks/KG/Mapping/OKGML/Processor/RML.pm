@@ -134,6 +134,7 @@ method _rml_rdf_mapping_po( $mc ) {
 
 		if( $template_name ) {
 			if( AtteanIRI->check( $o ) ) {
+				die "No class $template_name" unless $mc->model->has_class( $template_name );
 				my $class = $mc->model->get_class( $template_name );
 				my @class_elements =
 					grep { $_->mapper->can('class') && $_->mapper->class eq $template_name }
@@ -144,6 +145,7 @@ method _rml_rdf_mapping_po( $mc ) {
 					]
 				}
 			} elsif( RDFLiteral->check($o) ) {
+				die "No value $template_name" unless $mc->model->has_value( $template_name );
 				my $value = $mc->model->get_value( $template_name );
 				my @value_elements =
 					grep { $_->mapper->can('value') && $_->mapper->value eq $template_name }
