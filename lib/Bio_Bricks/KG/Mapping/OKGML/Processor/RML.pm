@@ -76,7 +76,7 @@ method _rml_subject_map_po($mc) {
 
 	my $class = $mc->model->get_class( $mc->element->mapper->class );
 	return qname('rr:subjectMap')    , bnode [
-		qname('rr:template'), literal( $class->rml_template( $mc->model, $mc->element ) ),    #;
+		qname('rr:template'), literal( $class->rml_template( $mc, $mc->element ) ),    #;
 		qname('rr:class')   , olist( $class->types_to_attean_iri($mc->model) )
 	],#;
 }
@@ -140,7 +140,7 @@ method _rml_rdf_mapping_po( $mc ) {
 						dpath('/elements/*/mapper/..')->match($mc->input);
 				for my $el (@class_elements) {
 					push @objectMap, bnode [
-						qname('rr:template'), literal( $class->rml_template( $mc->model, $el ) ),    #;
+						qname('rr:template'), literal( $class->rml_template( $mc, $el ) ),    #;
 					]
 				}
 			} elsif( RDFLiteral->check($o) ) {

@@ -10,9 +10,16 @@ use Bio_Bricks::Common::Types qw( ArrayRef Str StrMatch InstanceOf
 	IriableName
 );
 
+use Bio_Bricks::KG::Mapping::Util qw(
+	normalize_column_name
+	normalize_dataset_name
+	normalize_table_name
+);
+
 use IRI;
 use URI::Template;
 use URI::Escape qw(uri_unescape);
+use List::Util qw(tail);
 
 # classes:
 #   Dict[
@@ -64,19 +71,31 @@ method types_to_attean_iri( $model ) {
 	} $self->types->@*
 }
 
-method rml_template( $model, $element ) {
-	return "TODO" if $element->columns->@* > 1;
+method rml_template( $mc, $element ) {
 	if( $self->has_prefix ) {
-		return $model->_data_prefixes
+		die "prefix: does not work with multiple columns"
+			if $element->columns->@* > 1;
+
+		return $mc->model->_data_prefixes
 			->ns_map->namespace_uri( $self->prefix )
 			->iri->as_string . "{@{[ $element->columns->[0] ]}}";
 	} elsif( $self->has_uri ) {
+		die "uri: does not work with multiple columns (yet)"
+			if $element->columns->@* > 1;
+
 		return uri_unescape $self->uri->process_to_string(
 			value => "{@{[ $element->columns->[0] ]}}",
 		);
 	} else {
 		# neither
-		return 'TODO'; # TODO
+		return join q{/},
+			"http://example.com",
+			normalize_dataset_name($mc->dataset->name),
+			normalize_table_name(
+				join "/", tail -2, split m{/}, $mc->input->name
+			),
+			map { normalize_column_name($_), qq({$_}) } $element->columns->@*
+,#;
 	}
 }
 
