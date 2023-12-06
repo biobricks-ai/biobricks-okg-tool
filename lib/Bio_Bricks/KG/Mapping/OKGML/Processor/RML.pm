@@ -9,6 +9,8 @@ use Bio_Bricks::Common::Types qw( InstanceOf ConsumerOf );
 use curry;
 use Attean::RDF qw(iri);
 use Bio_Bricks::RDF::DSL;
+use Types::Attean qw( AtteanIRI );
+use Bio_Bricks::RDF::AtteanX::Types qw( RDFLiteral );
 use Bio_Bricks::RDF::DSL::Types qw(RDF_DSL_Context);
 use URI::NamespaceMap;
 
@@ -86,11 +88,13 @@ method _rml_maybe_valuelabel_po($mc) {
 		qname('rr:predicate'), $mc->element->mapper->label_predicate_to_attean_iri($self->rml_context, $mc->model)  ,#;
 		qname('rr:objectMap'), bnode [ qname('rml:reference'), literal($mc->element->columns->[0]) ]      ,#;
 	],#
-
 }
 
-lazy _rdf_mapping_model => method() {
+lazy _rdf_mapping_graph => method() {
 	my $graph  = Attean::IRI->new('http://example.org/graph');
+};
+
+lazy _rdf_mapping_model => method() {
 	my $store  = Attean->get_store('Memory')->new();
 	my $model = Attean::QuadModel->new( store => $store );
 	my $parser = Attean->get_parser('Turtle')->new();
@@ -99,12 +103,76 @@ lazy _rdf_mapping_model => method() {
 			$self->model->_data_prefixes->to_turtle_prefixes,
 			$self->model->get_mappings->@*;
 	my $iter = $parser->parse_iter_from_bytes( $turtle_buffer );
-	my $quads = $iter->as_quads($graph);
+	my $quads = $iter->as_quads($self->_rdf_mapping_graph);
 
 	$store->add_iter($quads);
 
 	return $model;
 };
+
+method _rdf_mapping_results_for_class( $class ) {
+	my $sparql = "SELECT * WHERE { <($class)> ?p ?o }";
+	my $s = Attean->get_parser('SPARQL')->new();
+	my ($algebra) = $s->parse($sparql);
+	my $results = $self->_rdf_mapping_model->evaluate($algebra, $self->_rdf_mapping_graph);
+	return $results;
+}
+
+method _rml_rdf_mapping_po( $mc ) {
+	return () unless $mc->model->has_class( $mc->element->mapper->class );
+
+	my $class = $mc->model->get_class( $mc->element->mapper->class );
+	my $results = $self->_rdf_mapping_results_for_class( $class->name );
+
+	my @po_list;
+	while (my $r = $results->next) {
+		my $p = $r->value('p');
+		my $o = $r->value('o');
+		my @objectMap;
+		my ($template_name) =
+			( $o->can('value') ? $o->value : $o->as_string ) =~ /\A \( (?<name>[^)]+)  \)  \z/x;
+
+		if( $template_name ) {
+			if( AtteanIRI->check( $o ) ) {
+				my $class = $mc->model->get_class( $template_name );
+				my @class_elements =
+					grep { $_->mapper->can('class') && $_->mapper->class eq $template_name }
+						dpath('/elements/*/mapper/..')->match($mc->input);
+				for my $el (@class_elements) {
+					push @objectMap, bnode [
+						qname('rr:template'), literal( $class->rml_template( $mc->model, $el ) ),    #;
+					]
+				}
+			} elsif( RDFLiteral->check($o) ) {
+				my $value = $mc->model->get_value( $template_name );
+				my @value_elements =
+					grep { $_->mapper->can('value') && $_->mapper->value eq $template_name }
+						dpath('/elements/*/mapper/..')->match($mc->input);
+				for my $el (@value_elements) {
+					push @objectMap, bnode [
+						# TODO datatype from $value->datatype
+						qname('rml:reference'), literal($el->columns->[0]), #,
+					]
+				}
+			} else {
+				# blank nodes could be here, but RML does not support that
+				die "Unknown type: $o";
+			}
+		} else {
+			push @objectMap, bnode [
+				qname('rr:constant'), $o,    #;
+			];
+		}
+
+		push @po_list,
+			qname('rr:predicateObjectMap'), bnode [
+				qname('rr:predicate'), $p  ,#;
+				qname('rr:objectMap'), $_   #
+			] for @objectMap;
+	}
+
+	return @po_list;
+}
 
 method generate_rml($MapperContext_curry, $elements) {
 	my $dce = URI::Namespace
@@ -132,11 +200,13 @@ method generate_rml($MapperContext_curry, $elements) {
 		for my $class_element (@classes) {
 			my $mc = $MapperContext_curry->( element => $class_element );
 
+
 			collect bnode [
 				a()                       , qname('rr:TriplesMap') ,#;
 				qname('rml:logicalSource'), $logical_source        ,#;
 				$self->_rml_subject_map_po($mc)                    ,#;
-				$self->_rml_maybe_valuelabel_po($mc)               ,#
+				$self->_rml_maybe_valuelabel_po($mc)               ,#;
+				$self->_rml_rdf_mapping_po($mc)                    ,#;
 			];#.
 		}
 
