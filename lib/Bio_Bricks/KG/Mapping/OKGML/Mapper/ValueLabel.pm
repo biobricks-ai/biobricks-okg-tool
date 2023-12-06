@@ -3,12 +3,13 @@ package Bio_Bricks::KG::Mapping::OKGML::Mapper::ValueLabel;
 
 use Mu;
 use Bio_Bricks::Common::Setup;
-use Bio_Bricks::Common::Types qw( Str
+use Bio_Bricks::Common::Types qw(
 	IriOrPrefixedQName
 	IriOrPrefixedQNameFromStr
+	IriableName
 );
 
-ro class => ( isa => Str );
+ro class => ( isa => IriableName );
 
 ro label_predicate => (
 	required => 0,

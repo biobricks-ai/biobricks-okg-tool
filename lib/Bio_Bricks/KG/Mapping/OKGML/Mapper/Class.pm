@@ -3,9 +3,9 @@ package Bio_Bricks::KG::Mapping::OKGML::Mapper::Class;
 
 use Mu;
 use Bio_Bricks::Common::Setup;
-use Bio_Bricks::Common::Types qw( Str );
+use Bio_Bricks::Common::Types qw( IriableName );
 
-ro class => ( isa => Str );
+ro class => ( isa => IriableName );
 
 with qw(Bio_Bricks::KG::Mapping::OKGML::Role::Mapper);
 
