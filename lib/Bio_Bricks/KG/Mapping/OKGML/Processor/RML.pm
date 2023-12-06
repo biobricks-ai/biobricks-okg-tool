@@ -63,6 +63,23 @@ method _rml_logical_source_subject( $mc ) {
 	return $logical_source;
 }
 
+method _rml_subject_map_po($mc) {
+	die <<~ERROR unless $mc->model->has_class( $mc->element->mapper->class );
+	Missing class:
+	  dataset  : @{[ $mc->dataset->name ]}
+	  input    : @{[ $mc->input->name ]}
+	  element  : @{[ $mc->element->name ]}
+	  class    : @{[ $mc->element->mapper->class ]}
+	ERROR
+
+	my $class = $mc->model->get_class( $mc->element->mapper->class );
+	return qname('rr:subjectMap')    , bnode [
+		qname('rr:template'), literal( $class->rml_template( $mc->model, $mc->element ) ),    #;
+		qname('rr:class')   , olist( $class->types_to_attean_iri($mc->model) )
+	],#;
+
+}
+
 method generate_rml($MapperContext_curry, $elements) {
 	rdf {
 		context( $self->rml_context );
@@ -80,22 +97,11 @@ method generate_rml($MapperContext_curry, $elements) {
 		my @classes = grep { $_->mapper isa 'Bio_Bricks::KG::Mapping::OKGML::Mapper::Class' } @$elements;
 		for my $class_element (@classes) {
 			my $mc = $MapperContext_curry->( element => $class_element );
-			die <<~ERROR unless $mc->model->has_class( $mc->element->mapper->class );
-			Missing class:
-			  dataset  : @{[ $mc->dataset->name ]}
-			  input    : @{[ $mc->input->name ]}
-			  element  : @{[ $mc->element->name ]}
-			  class    : @{[ $mc->element->mapper->class ]}
-			ERROR
 
-			my $class = $mc->model->get_class( $mc->element->mapper->class );
 			collect bnode [
 				a()                       , qname('rr:TriplesMap') ,#;
 				qname('rml:logicalSource'), $logical_source        ,#;
-				qname('rr:subjectMap')    , bnode [
-					qname('rr:template'), literal( $class->rml_template( $mc->model, $mc->element ) ),    #;
-					qname('rr:class')   , olist( $class->types_to_attean_iri($mc->model) )
-				],#;
+				$self->_rml_subject_map_po($mc)                    ,#
 			];#.
 		}
 
@@ -103,22 +109,10 @@ method generate_rml($MapperContext_curry, $elements) {
 		for my $value_label_element (@value_labels) {
 			my $mc = $MapperContext_curry->( element => $value_label_element );
 
-			die <<~ERROR unless $mc->model->has_class( $mc->element->mapper->class );
-			Missing class:
-			  dataset  : @{[ $mc->dataset->name ]}
-			  input    : @{[ $mc->input->name ]}
-			  element  : @{[ $mc->element->name ]}
-			  class    : @{[ $mc->element->mapper->class ]}
-			ERROR
-
-			my $class = $mc->model->get_class( $mc->element->mapper->class );
 			collect bnode [
 				a()                       , qname('rr:TriplesMap') ,#;
 				qname('rml:logicalSource'), $logical_source        ,#;
-				qname('rr:subjectMap')    , bnode [
-					qname('rr:template'), literal( $class->rml_template( $mc->model, $mc->element ) ),    #;
-					qname('rr:class')   , olist( $class->types_to_attean_iri($mc->model) )
-				],#;
+				$self->_rml_subject_map_po($mc)                    ,#
 				qname('rr:predicateObjectMap'), bnode [
 					qname('rr:predicate'), $mc->element->mapper->label_predicate_to_attean_iri($self->rml_context, $mc->model)  ,#;
 					qname('rr:objectMap'), bnode [ qname('rml:reference'), literal($mc->element->columns->[0]) ]      ,#;
