@@ -85,8 +85,8 @@ method _rml_maybe_valuelabel_po($mc) {
 	return () unless $mc->element->mapper->can('label_predicate_to_attean_iri');
 
 	return qname('rr:predicateObjectMap'), bnode [
-		qname('rr:predicate'), $mc->element->mapper->label_predicate_to_attean_iri($self->rml_context, $mc->model)  ,#;
-		qname('rr:objectMap'), bnode [ qname('rml:reference'), literal($mc->element->columns->[0]) ]      ,#;
+		qname('rr:predicate'), $mc->element->mapper->label_predicate_to_attean_iri($self->rml_context, $mc->model)            ,#;
+		qname('rr:objectMap'), bnode [ qname('rml:reference'), literal($mc->element->mapper->label_column_for_element($mc)) ] ,#;
 	],#
 }
 
