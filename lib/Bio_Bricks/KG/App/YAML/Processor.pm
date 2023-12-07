@@ -35,8 +35,10 @@ method run() {
 	);
 
 	my $output_fh = \*STDOUT;
+	my $namespaces = $rml->rml_context->namespaces;
+	$namespaces->add_mapping( '', Attean::IRI->new('http://base/') );
 	Attean->get_serializer( 'Turtle' )
-		->new( namespaces => $rml->rml_context->namespaces )
+		->new( namespaces => $namespaces )
 		->serialize_iter_to_io( $output_fh, $rml->triple_store->get_triples );
 }
 
