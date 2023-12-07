@@ -94,7 +94,11 @@ method rml_template( $mc, $element ) {
 			normalize_table_name(
 				join "/", tail -2, split m{/}, $mc->input->name
 			),
-			map { normalize_column_name($_), qq({$_}) } $element->columns->@*
+			(
+				map { normalize_column_name($_), qq({$_}) } $element->columns->@*
+			),
+			$self->name,
+
 ,#;
 	}
 }
