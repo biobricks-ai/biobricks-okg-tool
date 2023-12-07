@@ -151,6 +151,8 @@ method _rml_rdf_mapping_po( $mc ) {
 					grep { $_->mapper->can('value') && $_->mapper->value eq $template_name }
 						dpath('/elements/*/mapper/..')->match($mc->input);
 				for my $el (@value_elements) {
+					die "$mc: Value @{[ $el->name ]} should only have a single column"
+						unless $el->columns->@* == 1;
 					push @objectMap, bnode [
 						# TODO datatype from $value->datatype
 						qname('rml:reference'), literal($el->columns->[0]), #,
