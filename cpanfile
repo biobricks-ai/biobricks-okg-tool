@@ -9,6 +9,7 @@ requires 'Data::DPath';
 requires 'Data::Dumper';
 requires 'Data::TableReader';
 requires 'Devel::StrictMode';
+requires 'Exporter::Shiny';
 requires 'Exporter::Tiny';
 requires 'ExtUtils::XSpp::Cmd';
 requires 'Feature::Compat::Try';
@@ -68,9 +69,11 @@ requires 'strict';
 requires 'warnings';
 
 on test => sub {
+    requires 'Capture::Tiny';
     requires 'Data::Section';
     requires 'LWP::Protocol::https';
     requires 'LWP::UserAgent';
+    requires 'Path::Tiny';
     requires 'Test2::V0';
     requires 'YAML';
     requires 'lib';

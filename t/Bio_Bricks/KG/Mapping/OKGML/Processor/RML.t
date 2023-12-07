@@ -7,7 +7,12 @@ use lib 't/lib';
 use YAML qw(Load);
 use Data::Section -setup;
 
-subtest "" => sub {
+use Path::Tiny;
+use Bio_Bricks::KG::Mapping::OKGML::Model;
+use Bio_Bricks::KG::Mapping::OKGML::Processor::RML;
+use Capture::Tiny qw(capture);
+
+subtest "RML RDF generation from OKG-ML YAML" => sub {
 	my $yaml = __PACKAGE__->section_data('input.yml')->$*;
 	my $ttl = __PACKAGE__->section_data('output.ttl')->$*;
 
@@ -19,15 +24,35 @@ subtest "" => sub {
 	);
 
 	my $output_fh = \*STDOUT;
-	Attean->get_serializer( 'Turtle' )
-		->new( namespaces => $rml->rml_context->namespaces )
-		->serialize_iter_to_io( $output_fh, $rml->triple_store->get_triples );
+	my $expected_iter = Attean->get_parser( 'Turtle' )->new()
+		->parse_iter_from_bytes( $ttl );
 
+
+        my $tempdir = Path::Tiny->tempdir;
+        $tempdir->mkpath unless -d $tempdir;
+
+        my $expected_nt = $tempdir->child('expected.nt');
+        my $got_nt      = $tempdir->child('got.nt');
+
+	Attean->get_serializer( 'CanonicalNTriples' )->new()
+		->serialize_iter_to_io( $expected_nt->openw, $expected_iter );
+
+	Attean->get_serializer( 'CanonicalNTriples' )->new()
+		->serialize_iter_to_io( $got_nt->openw, $rml->triple_store->get_triples );
+
+        die "Need to set JENA_HOME" unless $ENV{JENA_HOME};
+        my ($output, $error, $exit) = capture {
+          system("$ENV{JENA_HOME}/bin/rdfcompare", $expected_nt, $got_nt);
+        };
+        die "Failed to compare:\n$output\n$error" unless 0 == $exit;
+
+        like $output, qr/\Amodels are equal/, 'Models are equal';
 };
 
 done_testing;
 __DATA__
 __[ input.yml ]__
+---
 _meta:
   name: OKG-ML
   version: 1.0.0
@@ -36,16 +61,28 @@ classes:
     description: A record in the dataset
     types:
       - 'http://example.com/RecordPK' # measure group?
+  Measure_Group:
+    description: Measure group (connects assay with endpoint)
+    types:
+      - BAO:0000040
+  Chemical_Entity:
+    description: A chemical entity
+    types:
+      - CHEMINF:000000
+  Endpoint:
+    description: Endpoint result
+    types:
+      - BAO:0000179
   Assay:
     description: bioassay
     types:
       - BAO:0000015
-  CAS RN:
+  CAS_RN:
     description: CAS registry number.
     prefix: CAS
     types:
       - CHEMINF:000446
-  DSSTOX SID:
+  DSSTOX_SID:
     description: DSSTOX substance identifier
     types:
       - CHEMINF:000568
@@ -55,7 +92,28 @@ datasets:
     inputs:
       data-source/ice/DART_Data.parquet:
         elements:
-          - _RecordPK:
+          - _ChemicalEntity:
+              _mapper_alts:
+                Value: ~
+                ValueLabel:
+                  class: ~
+              columns:
+                - DTXSID
+              mapper:
+                Class:
+                  class: Chemical_Entity
+          - _MeasureGroup:
+              _mapper_alts:
+                Value: ~
+                ValueLabel:
+                  class: ~
+              columns:
+                - DTXSID
+                - Assay
+              mapper:
+                Class:
+                  class: Measure_Group
+          - _Endpoint:
               _mapper_alts:
                 Value: ~
                 ValueLabel:
@@ -63,9 +121,11 @@ datasets:
               columns:
                 - Record ID
                 - DTXSID
+                - Endpoint
               mapper:
-                Class:
-                  class: RecordPK
+                ValueLabel:
+                  class: Endpoint
+                  label_column: Endpoint
           - Data Name:
               _mapper_alts:
                 Class:
@@ -116,7 +176,7 @@ datasets:
                 - Chemical Name
               mapper:
                 Value:
-                  value: Chemical Name
+                  value: Chemical_Name
           - CASRN:
               _mapper_alts:
                 Value: ~
@@ -126,7 +186,7 @@ datasets:
                 - CASRN
               mapper:
                 Class:
-                  class: CAS RN
+                  class: CAS_RN
           - DTXSID:
               _mapper_alts:
                 Value: ~
@@ -136,7 +196,7 @@ datasets:
                 - DTXSID
               mapper:
                 Class:
-                  class: DSSTOX SID
+                  class: DSSTOX_SID
           - Study ID:
               _mapper_alts:
                 Class:
@@ -209,7 +269,7 @@ datasets:
                 - Critical Effect
               mapper:
                 Value:
-                  value: Critical Effect
+                  value: Critical_Effect
           - Assay:
               _mapper_alts:
                 Class:
@@ -229,9 +289,7 @@ datasets:
                   class: ~
               columns:
                 - Endpoint
-              mapper:
-                Value:
-                  value: Endpoint
+              mapper: {}
           - Response:
               _mapper_alts:
                 Class:
@@ -253,7 +311,7 @@ datasets:
                 - Response Unit
               mapper:
                 Value:
-                  value: Response Unit
+                  value: Response_Unit
           - Unified Medical Language System:
               _mapper_alts:
                 Class:
@@ -296,17 +354,31 @@ datasets:
               mapper: {}
 mappings:
   - >-
-    <(RecordPK)>
-      ex:has_assay <(Assay)>;
-      ex:has_chemical <(CAS RN)>, <(DTXSID)>
-      .
-
     <(Assay)>
-      ex:has_critical_effect "(Critical Effect)" ;
-      ex:has_endpoint        "(Endpoint)"        ;
-      ex:has_response        "(Response)"        ;
-      ex:has_response_unit   "(Response Unit)"   ;
-      ex:has_route           "(Route)"           .
+      BAO:0000209 <(Measure_Group)>. # (has measure group)
+
+    <(Measure_Group)>
+      OBI:0000299 <(Endpoint)>        ; # (has specified output)
+      RO:0000057  <(Chemical_Entity)> . # (has participant)
+
+    <(Chemical_Entity)>
+      rdfs:label          "(Chemical_Name)" ;
+      RO:0000056          <(Measure_Group)> ; # (participates in)
+      EDAM:has_identifier <(CAS_RN)>        ;
+      EDAM:has_identifier <(DSSTOX_SID)>    .
+
+    <(Endpoint)>
+      SIO:has-value "(Response)"      ;
+      SIO:has-unit  "(Response_Unit)" ;
+      ExO:0000055   "(Route)"         . # route
+
+    <(CAS_RN)>
+      rdfs:label "(Chemical_Name)";
+      dce:source "CAS"            .
+
+    <(DSSTOX_SID)>
+      rdfs:label "(Chemical_Name)";
+      dce:source "CompTox"        .
 prefixes:
   BAO:
     uri: http://www.bioassayontology.org/bao#BAO_
@@ -314,18 +386,40 @@ prefixes:
     uri: http://identifiers.org/cas/
   CHEMINF:
     uri: http://purl.obolibrary.org/obo/CHEMINF_
+  SIO:
+    uri: http://semanticscience.org/resource/SIO_
+  OBI:
+    uri: http://purl.obolibrary.org/obo/OBI_
+  RO:
+    uri: http://purl.obolibrary.org/obo/RO_
+  ExO:
+    uri: http://purl.obolibrary.org/obo/ExO_
+  EDAM:
+    uri: http://edamontology.org/
+  dce:
+    uri: http://purl.org/dc/elements/1.1/
+  dcterms:
+    uri: http://purl.org/dc/terms/
+  rdfs:
+    uri: http://www.w3.org/2000/01/rdf-schema#
 values:
-  Chemical Name: ~
-  Critical Effect: ~
-  Endpoint: ~
+  Chemical_Name: ~
+  Critical_Effect: ~
   Response: ~
-  Response Unit: ~
+  Response_Unit: ~
   Route: ~
 
 __[ output.ttl ]__
-@prefix cheminf: <http://semanticscience.org/resource/CHEMINF_> .
-@prefix ex:      <http://example.com/> .
-@prefix ex-base: <http://example.com/base/> .
+@prefix BAO:     <http://www.bioassayontology.org/bao#BAO_> .
+@prefix CAS:     <http://identifiers.org/cas/> .
+@prefix CHEMINF: <http://purl.obolibrary.org/obo/CHEMINF_> .
+@prefix EDAM:    <http://edamontology.org/> .
+@prefix ExO:     <http://purl.obolibrary.org/obo/ExO_> .
+@prefix OBI:     <http://purl.obolibrary.org/obo/OBI_> .
+@prefix RO:      <http://purl.obolibrary.org/obo/RO_> .
+@prefix SIO:     <http://semanticscience.org/resource/SIO_> .
+@prefix dce:     <http://purl.org/dc/elements/1.1/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix fnml:    <http://semweb.mmlab.be/ns/fnml#> .
 @prefix fno:     <https://w3id.org/function/ontology#> .
 @prefix grel:    <http://users.ugent.be/~bjdmeest/function/grel.ttl#> .
@@ -336,106 +430,99 @@ __[ output.ttl ]__
 @prefix rr:      <http://www.w3.org/ns/r2rml#> .
 @prefix xsd:     <http://www.w3.org/2001/XMLSchema> .
 
-[ rdf:type           rr:TriplesMap;
-  rml:logicalSource  ex-base:ls_DART_Data;
-  rr:subjectMap      [ rr:class     cheminf:000000 , cheminf:000568;
-                       rr:template  "https://comptox.epa.gov/dashboard/chemical/details/{DTXSID}"
-                     ]
-] .
-
-[ rdf:type           rr:TriplesMap;
-  rml:logicalSource  ex-base:ls_DART_Data;
-  rr:subjectMap      [ rr:class     cheminf:000000 , cheminf:000446;
-                       rr:template  "http://identifiers.org/cas/{CASRN}"
-                     ]
-] .
-
-ex-base:TripleMap_Top_DART_Data
-        rdf:type               rr:TriplesMap;
-        rml:logicalSource      ex-base:ls_DART_Data;
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Data Type" ];
-                                 rr:predicate  ex:data_type
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Chemical Name" ];
-                                 rr:predicate  ex:chemical_name
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Reference" ];
-                                 rr:predicate  ex:reference
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rr:template  "http://identifiers.org/cas/{CASRN}" ];
-                                 rr:predicate  ex:casrn
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Unified Medical Language System" ];
-                                 rr:predicate  ex:unified_medical_language_system
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Record ID" ];
-                                 rr:predicate  ex:record_id
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rr:template  "http://example.com/ice/DART_Data/record_id/{Record ID}/dtxsid/{DTXSID}/{_ROW_NUMBER}/Relation-Endpoint" ];
-                                 rr:predicate  ex:relation-endpoint
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Sex" ];
-                                 rr:predicate  ex:sex
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rr:template  "https://comptox.epa.gov/dashboard/chemical/details/{DTXSID}" ];
-                                 rr:predicate  ex:dtxsid
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Data Version" ];
-                                 rr:predicate  ex:data_version
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "_ROW_NUMBER" ];
-                                 rr:predicate  ex:_row_number
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "URL" ];
-                                 rr:predicate  ex:url
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Species" ];
-                                 rr:predicate  ex:species
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Lifestage" ];
-                                 rr:predicate  ex:lifestage
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "PMID" ];
-                                 rr:predicate  ex:pmid
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Study ID" ];
-                                 rr:predicate  ex:study_id
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Strain" ];
-                                 rr:predicate  ex:strain
-                               ];
-        rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Data Name" ];
-                                 rr:predicate  ex:data_name
-                               ];
-        rr:subjectMap          [ rr:class     ex:DART_Data_Record;
-                                 rr:template  "http://example.com/ice/DART_Data/record_id/{Record ID}/dtxsid/{DTXSID}"
-                               ] .
-
-ex-base:ls_DART_Data  rdf:type    rml:LogicalSource;
-        rml:referenceFormulation  ql:CSV;
-        rml:source                "data-processed/ice/DART_Data.parquet" .
-
 [ rdf:type               rr:TriplesMap;
-  rml:logicalSource      ex-base:ls_DART_Data;
+  rml:logicalSource      <ls_ice_data-source_ice_DART_Data.parquet>;
   rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Response" ];
-                           rr:predicate  ex:response
+                           rr:predicate  SIO:has-value
                          ];
   rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Response Unit" ];
-                           rr:predicate  ex:response_unit
-                         ];
-  rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Endpoint" ];
-                           rr:predicate  ex:endpoint
+                           rr:predicate  SIO:has-unit
                          ];
   rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Route" ];
-                           rr:predicate  ex:route
+                           rr:predicate  ExO:0000055
+                         ];
+  rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Endpoint" ];
+                           rr:predicate  rdfs:label
+                         ];
+  rr:subjectMap          [ rr:class     BAO:0000179;
+                           rr:template  "http://example.com/ice/DART_Data.parquet/record_id/{Record ID}/dtxsid/{DTXSID}/endpoint/{Endpoint}/Endpoint"
+                         ]
+] .
+
+[ rdf:type               rr:TriplesMap;
+  rml:logicalSource      <ls_ice_data-source_ice_DART_Data.parquet>;
+  rr:predicateObjectMap  [ rr:objectMap  [ rr:constant  "CompTox" ];
+                           rr:predicate  dce:source
+                         ];
+  rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Chemical Name" ];
+                           rr:predicate  rdfs:label
+                         ];
+  rr:subjectMap          [ rr:class     CHEMINF:000568;
+                           rr:template  "https://comptox.epa.gov/dashboard/chemical/details/{DTXSID}"
+                         ]
+] .
+
+<ls_ice_data-source_ice_DART_Data.parquet>
+        rdf:type                  rml:LogicalSource;
+        dce:source                "ice";
+        dce:title                 "data-source/ice/DART_Data.parquet";
+        rml:referenceFormulation  ql:CSV;
+        rml:source                "data-source/ice/DART_Data.parquet" .
+
+[ rdf:type               rr:TriplesMap;
+  rml:logicalSource      <ls_ice_data-source_ice_DART_Data.parquet>;
+  rr:predicateObjectMap  [ rr:objectMap  [ rr:template  "http://example.com/ice/DART_Data.parquet/record_id/{Record ID}/dtxsid/{DTXSID}/endpoint/{Endpoint}/Endpoint" ];
+                           rr:predicate  OBI:0000299
+                         ];
+  rr:predicateObjectMap  [ rr:objectMap  [ rr:template  "http://example.com/ice/DART_Data.parquet/dtxsid/{DTXSID}/Chemical_Entity" ];
+                           rr:predicate  RO:0000057
+                         ];
+  rr:subjectMap          [ rr:class     BAO:0000040;
+                           rr:template  "http://example.com/ice/DART_Data.parquet/dtxsid/{DTXSID}/assay/{Assay}/Measure_Group"
+                         ]
+] .
+
+[ rdf:type               rr:TriplesMap;
+  rml:logicalSource      <ls_ice_data-source_ice_DART_Data.parquet>;
+  rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Chemical Name" ];
+                           rr:predicate  rdfs:label
+                         ];
+  rr:predicateObjectMap  [ rr:objectMap  [ rr:template  "https://comptox.epa.gov/dashboard/chemical/details/{DTXSID}" ];
+                           rr:predicate  EDAM:has_identifier
+                         ];
+  rr:predicateObjectMap  [ rr:objectMap  [ rr:template  "http://example.com/ice/DART_Data.parquet/dtxsid/{DTXSID}/assay/{Assay}/Measure_Group" ];
+                           rr:predicate  RO:0000056
+                         ];
+  rr:predicateObjectMap  [ rr:objectMap  [ rr:template  "http://identifiers.org/cas/{CASRN}" ];
+                           rr:predicate  EDAM:has_identifier
+                         ];
+  rr:subjectMap          [ rr:class     CHEMINF:000000;
+                           rr:template  "http://example.com/ice/DART_Data.parquet/dtxsid/{DTXSID}/Chemical_Entity"
+                         ]
+] .
+
+[ rdf:type               rr:TriplesMap;
+  rml:logicalSource      <ls_ice_data-source_ice_DART_Data.parquet>;
+  rr:predicateObjectMap  [ rr:objectMap  [ rr:constant  "CAS" ];
+                           rr:predicate  dce:source
+                         ];
+  rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Chemical Name" ];
+                           rr:predicate  rdfs:label
+                         ];
+  rr:subjectMap          [ rr:class     CHEMINF:000446;
+                           rr:template  "http://identifiers.org/cas/{CASRN}"
+                         ]
+] .
+
+[ rdf:type               rr:TriplesMap;
+  rml:logicalSource      <ls_ice_data-source_ice_DART_Data.parquet>;
+  rr:predicateObjectMap  [ rr:objectMap  [ rr:template  "http://example.com/ice/DART_Data.parquet/dtxsid/{DTXSID}/assay/{Assay}/Measure_Group" ];
+                           rr:predicate  BAO:0000209
                          ];
   rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Assay" ];
-                           rr:predicate  ex:assay
+                           rr:predicate  rdfs:label
                          ];
-  rr:predicateObjectMap  [ rr:objectMap  [ rml:reference  "Critical Effect" ];
-                           rr:predicate  ex:critical_effect
-                         ];
-  rr:subjectMap          [ rr:class     ex:DART_Data-Endpoint;
-                           rr:template  "http://example.com/ice/DART_Data/record_id/{Record ID}/dtxsid/{DTXSID}/{_ROW_NUMBER}/Relation-Endpoint"
+  rr:subjectMap          [ rr:class     BAO:0000015;
+                           rr:template  "http://example.com/ice/DART_Data.parquet/assay/{Assay}/Assay"
                          ]
 ] .
