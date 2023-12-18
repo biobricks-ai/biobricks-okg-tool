@@ -90,7 +90,7 @@ method TO_HASH() {
 		my $func = "_data_$_";
 		provided_deref keys $self->$func->%*,
 			sub {
-				$_ => $self->$func,
+				$_ => $T_MAPPING{$_}->TO_COLLECTION( $self->$func ),
 			},
 		} qw( datasets classes values ),
 

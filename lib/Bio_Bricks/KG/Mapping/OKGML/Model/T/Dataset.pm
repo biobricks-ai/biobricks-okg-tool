@@ -35,6 +35,11 @@ use MooX::Struct -retain,
 			isa    => ArrayRef[ Element->TYPE_TINY ],
 			coerce => sub { Element->FROM_COLLECTION($_[0]) },,
 		],
+		TO_HASH  => method() {
+			return {
+				elements => Element->TO_COLLECTION( $self->elements ),
+			};
+		},
 		-with    => [ qw(Bio_Bricks::KG::Mapping::OKGML::Model::T::Role::FromMapping) ],
 	];
 
@@ -62,5 +67,13 @@ ro inputs => (
 with qw(
 	Bio_Bricks::KG::Mapping::OKGML::Model::T::Role::FromMapping
 );
+
+around TO_HASH => fun(@) {
+	my ( $orig, $class, @args ) = @_;
+        my $obj = $class->$orig(@args);
+	$obj->{inputs} = Input->TO_COLLECTION( $obj->{inputs} );
+	$obj;
+};
+
 
 1;
