@@ -10,7 +10,7 @@ use Bio_Bricks::KG::Mapping::OKGML::Model;
 use Bio_Bricks::KG::Mapping::OKGML::Processor::RML;
 use Bio_Bricks::Common::Types qw( AbsFile );
 
-use YAML qw(LoadFile);
+use YAML::XS qw(LoadFile);
 
 with qw(
 	Bio_Bricks::KG::App::Role::BaseDirOption
