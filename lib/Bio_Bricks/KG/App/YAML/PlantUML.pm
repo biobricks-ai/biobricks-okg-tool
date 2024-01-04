@@ -40,6 +40,15 @@ lazy _rdf_mapping_graph => method() {
 	my $graph  = Attean::IRI->new('http://example.org/graph');
 };
 
+method _do_query( $ns_map, $model, $sparql ) {
+	my $s = Attean->get_parser('SPARQL')->new(
+		namespaces => $ns_map,
+	);
+	my ($algebra) = $s->parse($sparql);
+	my $results = $model->evaluate($algebra, $self->_rdf_mapping_graph);
+	return $results;
+}
+
 method _mapping_labels( $ns_map, $model ) {
 	defined $ns_map->namespace_uri('skos') or die 'Missing skos prefix';
 	my $sparql = <<~SPARQL;
@@ -49,10 +58,7 @@ method _mapping_labels( $ns_map, $model ) {
 		?iri <http://www.w3.org/2004/02/skos/core#prefLabel> ?label
 	}
 	SPARQL
-	my $s = Attean->get_parser('SPARQL')->new();
-	my ($algebra) = $s->parse($sparql);
-	my $results = $model->evaluate($algebra, $self->_rdf_mapping_graph);
-	return $results;
+	return $self->_do_query( $ns_map, $model, $sparql );
 }
 
 method run() {
