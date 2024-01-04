@@ -1,6 +1,11 @@
 package Bio_Bricks::KG::App;
 # ABSTRACT: App for working with knowledge graphs
 
+use strict;
+use warnings;
+
+our $VERSION = 'v0.1.0';
+
 use Mu;
 use CLI::Osprey;
 
@@ -8,6 +13,12 @@ use Bio_Bricks::Common::Setup;
 
 with qw(
 	Bio_Bricks::KG::App::Role::BaseDirOption
+);
+
+option version => (
+	is => 'ro',
+	default => 0,
+	doc => 'Show version information',
 );
 
 subcommand 'yaml' => 'Bio_Bricks::KG::App::YAML';
@@ -19,7 +30,14 @@ my %base_fzf_config = (
 	algo => 'v2',
 );
 
+method show_version() {
+	print "biobricks-okg-tool $VERSION\n";
+	exit 0;
+}
+
 method run() {
+	$self->show_version if $self->version;
+
 	use Bio_Bricks::KG::Brick::DataSetFactory;
 	my $datasets = Bio_Bricks::KG::Brick::DataSetFactory->new( base_dir => $self->base_dir )->create;
 	my %dataset_by_name = map { $_->name => $_ } $datasets->@*;
