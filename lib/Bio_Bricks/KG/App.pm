@@ -21,7 +21,8 @@ option version => (
 	doc => 'Show version information',
 );
 
-subcommand 'yaml' => 'Bio_Bricks::KG::App::YAML';
+subcommand 'yaml'   => 'Bio_Bricks::KG::App::YAML';
+subcommand 'sparql' => 'Bio_Bricks::KG::App::SPARQL';
 
 use Search::Fzf;
 my %base_fzf_config = (
