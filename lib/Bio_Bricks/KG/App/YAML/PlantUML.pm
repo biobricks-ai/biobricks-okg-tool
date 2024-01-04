@@ -133,8 +133,8 @@ method run() {
 			my $iri_abbr = $ns_map->abbreviate( $r->value('iri') );
 			my $label = $r->value('label')->value;
 
-			$plantuml =~ s/(\Q$iri_abbr\E$)/$1\\n($label)/gm;
-			$plantuml =~ s/(\Q{field}\E\s+\b\Q$iri_abbr\E\b.*$)/$1 # ($label)/gm;
+			$plantuml =~ s/(:\s+\Q$iri_abbr\E$)/$1\\n($label)/gm;
+			$plantuml =~ s/(\Q{field}\E\s+\b\Q$iri_abbr\E\b.*$)/$1 # [$label]/gm;
 		}
 
 		$output_dir->child($puml_file->basename)->spew_utf8($plantuml);
