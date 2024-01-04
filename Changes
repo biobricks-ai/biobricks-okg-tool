@@ -1,5 +1,6 @@
 Changes for Bio_Bricks-KG-App:
 
+    * Generate PlantUML from OKG-ML model.
 v0.1.0 2024-01-04 10:16:14-0500
 
   - Initial release.
