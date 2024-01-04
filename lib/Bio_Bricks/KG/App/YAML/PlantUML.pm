@@ -12,6 +12,9 @@ use Bio_Bricks::KG::Mapping::OKGML::Model;
 use Bio_Bricks::KG::Mapping::OKGML::Processor::RML;
 use Bio_Bricks::Common::Types qw( Path AbsFile );
 
+use Bio_Bricks::RDF::DSL;
+use Attean::RDF qw(iri);
+
 use YAML::XS qw(LoadFile Dump);
 
 with qw(
@@ -74,6 +77,18 @@ method run() {
 
 	my $tmpdir = Path::Tiny->tempdir;
 	my @mappings = $okg_model->get_mappings->@*;
+
+	my $ns_map = $okg_model->_data_prefixes->ns_map;
+
+	my %iri_name_to_triples = map {
+		my $class_iri = iri("(@{[$_->name]})");
+		$class_iri->as_string =>
+			[
+				turtle_map $class_iri,
+					a(), olist($_->types_to_attean_iri( $okg_model ))#.
+			]
+	} values $okg_model->_data_classes->%*;
+
 	for my $mapping_idx (0..@mappings-1) {
 		my $mapping = $mappings[$mapping_idx];
 
@@ -106,7 +121,6 @@ method run() {
 
 		my $plantuml = $puml_file->slurp_utf8;
 
-		my $ns_map = $okg_model->_data_prefixes->ns_map;
 		my $labels_iter = $self->_mapping_labels( $ns_map, $model );
 
 		while (my $r = $labels_iter->next) {
