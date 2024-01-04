@@ -1,0 +1,12 @@
+Changes for Bio_Bricks-KG-App:
+
+v0.1.0 2024-01-04 10:16:14-0500
+
+  - Initial release.
+  - Features:
+
+    * Initial version of framework for modeling tabular data for
+      generation of RML mappings via a YAML configuration.
+    * Ingestion of Parquet schemas via DuckDB.
+    * DSL for RDF generation using syntax similar to Turtle.
+    * DuckDB SQL generation helpers.
