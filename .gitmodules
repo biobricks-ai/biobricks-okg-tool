@@ -1,0 +1,3 @@
+[submodule "vendor/rdf2rml"]
+	path = vendor/rdf2rml
+	url = https://github.com/VladimirAlexiev/rdf2rml.git
