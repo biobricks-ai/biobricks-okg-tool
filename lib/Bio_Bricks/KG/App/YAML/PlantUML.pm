@@ -104,6 +104,12 @@ method run() {
 
 		$store->add_iter($quads);
 
+		my $subjects_iter = $self->_do_query($ns_map, $model, 'SELECT DISTINCT ?s WHERE { ?s ?p ?o }');
+		while( my $r = $subjects_iter->next ) {
+			my $subject_iri = $r->value('s');
+			$store->add_quad($_->as_quad($self->_rdf_mapping_graph)) for ($iri_name_to_triples{ $subject_iri->as_string } // [])->@*;
+		}
+
 		my $output_fh = \*STDOUT;
 		my $namespaces = $okg_model->_data_prefixes->ns_map;
 		$namespaces->add_mapping( '', Attean::IRI->new('http://base/') );
