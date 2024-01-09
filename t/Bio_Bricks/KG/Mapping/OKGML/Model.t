@@ -68,7 +68,31 @@ subtest "Loading model" => sub {
 			};
 		},
 		'class';
-;
+
+	is load_model_from_data('data'),
+		object {
+			call TO_HASH => hash {
+				field 'prefixes' => hash {
+					field 'BAO'     => D();
+					field 'CAS'     => D();
+					field 'CHEMINF' => D();
+					end;
+				};
+				field 'classes' => hash {
+					field 'CAS_RN' => hash {
+					  field 'description' => D();
+					  field 'prefix' => D();
+					  field 'types' => array {
+					    item 'CHEMINF:000446';
+					    end;
+					  };
+					};
+					etc;
+				};
+				etc;
+			};
+		},
+		'data';
 };
 
 done_testing;
@@ -112,12 +136,12 @@ classes:
     description: bioassay
     types:
       - BAO:0000015
-  CAS RN:
+  CAS_RN:
     description: CAS registry number.
     prefix: CAS
     types:
       - CHEMINF:000446
-  DSSTOX SID:
+  DSSTOX_SID:
     description: DSSTOX substance identifier
     types:
       - CHEMINF:000568
@@ -136,7 +160,7 @@ datasets:
               columns: [ 'CASRN' ]
               mapper:
                 Class:
-                  class: CAS RN
+                  class: CAS_RN
           - Chemical Name:
               columns: [ 'Chemical Name' ]
               mapper:
@@ -145,7 +169,7 @@ datasets:
               columns: [ 'DTXSID' ]
               mapper:
                 Class:
-                  class: DSSTOX SID
+                  class: DSSTOX_SID
           - Data Name:
               class: ~
               type: ~
