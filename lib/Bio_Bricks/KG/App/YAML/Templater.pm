@@ -5,7 +5,7 @@ use Mu;
 use CLI::Osprey
 	desc => 'Create OKG-ML template';
 #use Data::Rmap;
-use YAML qw(Dump);
+use YAML::XS qw(Dump);
 
 use Bio_Bricks::Common::Setup;
 use Bio_Bricks::KG::Mapping::OKGML::Model;

@@ -6,7 +6,7 @@ use lib 't/lib';
 
 use Bio_Bricks::Common::Setup;
 use Bio_Bricks::KG::Mapping::OKGML::Model;
-use YAML qw(Load);
+use YAML::XS qw(Load);
 use Data::Section -setup;
 
 fun load_model_from_data($name) {

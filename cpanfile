@@ -55,7 +55,7 @@ requires 'URI::Escape';
 requires 'URI::NamespaceMap';
 requires 'URI::Template';
 requires 'With::Roles';
-requires 'YAML';
+requires 'YAML::XS';
 requires 'aliased';
 requires 'autodie';
 requires 'base';
@@ -76,5 +76,6 @@ on test => sub {
     requires 'Path::Tiny';
     requires 'Test2::V0';
     requires 'YAML';
+    requires 'YAML::XS';
     requires 'lib';
 };

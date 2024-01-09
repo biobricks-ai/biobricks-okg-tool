@@ -4,7 +4,7 @@ use Test2::V0;
 
 use lib 't/lib';
 
-use YAML qw(Load);
+use YAML::XS qw(Load);
 use Data::Section -setup;
 
 use Path::Tiny;
