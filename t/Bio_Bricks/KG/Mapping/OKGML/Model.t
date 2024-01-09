@@ -55,7 +55,7 @@ subtest "Loading model" => sub {
 					end;
 				};
 				field 'classes' => hash {
-					field 'CAS RN' => hash {
+					field 'CAS_RN' => hash {
 					  field 'description' => D();
 					  field 'types' => array {
 					    item 'CHEMINF:000446';
@@ -93,7 +93,7 @@ prefixes:
   CHEMINF:
     uri: http://purl.obolibrary.org/obo/CHEMINF_
 classes:
-  CAS RN:
+  CAS_RN:
     description: >-
       CAS registry number.
     types:
