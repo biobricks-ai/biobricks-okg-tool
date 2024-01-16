@@ -137,11 +137,14 @@ method run() {
 		my $labels_iter = $self->_mapping_labels( $ns_map, $model );
 
 		while (my $r = $labels_iter->next) {
-			my $iri_abbr = $ns_map->abbreviate( $r->value('iri') );
+			my $iri = $r->value('iri');
+			my $iri_abbr = $ns_map->abbreviate( $iri );
 			my $label = $r->value('label')->value;
 
-			$plantuml =~ s/(:\s+\Q$iri_abbr\E$)/$1\\n($label)/gm;
-			$plantuml =~ s/(\Q{field}\E\s+\b\Q$iri_abbr\E\b.*$)/$1 # [$label]/gm;
+			my $iri_any_re = qr/(?:\Q$iri_abbr\E|\Q<@{[ $iri->as_string ]}>\E)/;
+
+			$plantuml =~ s/(:\s+$iri_any_re$)/$1\\n($label)/gm;
+			$plantuml =~ s/(\Q{field}\E\s+\b$iri_any_re\b.*$)/$1 # [$label]/gm;
 		}
 
 		$output_dir->child($puml_file->basename)->spew_utf8($plantuml);
