@@ -14,6 +14,7 @@ requires 'Exporter::Tiny';
 requires 'ExtUtils::XSpp::Cmd';
 requires 'Feature::Compat::Try';
 requires 'File::Spec';
+requires 'File::chdir';
 requires 'Function::Parameters';
 requires 'IO::String';
 requires 'IRI';
