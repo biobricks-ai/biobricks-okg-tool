@@ -16,6 +16,7 @@ use Bio_Bricks::RDF::DSL;
 use Attean::RDF qw(iri);
 
 use YAML::XS qw(LoadFile Dump);
+use File::chdir;
 
 with qw(
 	Bio_Bricks::KG::App::Role::BaseDirOption
@@ -73,7 +74,7 @@ method run() {
 	my $output_dir = $self->output_dir;
 	$output_dir->mkdir;
 
-	my $rdfpuml = path($lib::projectroot::ROOT, 'vendor/rdf2rml/bin/rdfpuml.pl' );
+	my $rdfpuml = path($lib::projectroot::ROOT, 'vendor/rdf2rml/bin/rdfpuml.pl' )->absolute;
 
 	my $tmpdir = Path::Tiny->tempdir;
 	my @mappings = $okg_model->get_mappings->@*;
@@ -118,10 +119,16 @@ method run() {
 			->serialize_iter_to_bytes( $store->get_quads );
 
 		my $ttl_file = $tmpdir->child("mapping_${mapping_idx}.ttl");
+		my $prefixes_file = $tmpdir->child("prefixes.ttl");
 		my $puml_file = $tmpdir->child("mapping_${mapping_idx}.puml");
-		$ttl_file->spew_utf8( $turtle );
 
-		0 == system( $^X, $rdfpuml, $ttl_file ) or die "Could not run rdfpuml";
+		$ttl_file->spew_utf8( $turtle );
+		$prefixes_file->spew_utf8( $okg_model->_data_prefixes->to_turtle_prefixes );
+
+		{
+			local $CWD = "$tmpdir";
+			0 == system( $^X, $rdfpuml, $ttl_file ) or die "Could not run rdfpuml";
+		}
 
 		die "Empty PlantUML" unless -s $puml_file;
 
