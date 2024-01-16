@@ -145,6 +145,7 @@ method run() {
 
 			$plantuml =~ s/(:\s+$iri_any_re$)/$1\\n($label)/gm;
 			$plantuml =~ s/(\Q{field}\E\s+\b$iri_any_re\b.*$)/$1 # [$label]/gm;
+			$plantuml =~ s/(\Q{field}\E\s+a\s+$iri_any_re$)/$1 # ($label)/gm;
 		}
 
 		$output_dir->child($puml_file->basename)->spew_utf8($plantuml);
